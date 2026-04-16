@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import type { UserRole, Department } from "@/types";
+import { createClient } from "@supabase/supabase-js";
 
 // ── Validation schema ────────────────────────────────────────────────────────
 const loginSchema = z.object({
@@ -57,13 +58,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const { username, password } = parsed.data;
 
         try {
-          const { createClient } = await import("@supabase/supabase-js");
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+          const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
-          const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!,
-            { auth: { autoRefreshToken: false, persistSession: false } }
-          );
+          if (!supabaseUrl || !supabaseKey) {
+            console.error("[AUTH] Missing Supabase environment variables!");
+            return null;
+          }
+
+          const supabase = createClient(supabaseUrl, supabaseKey, {
+            auth: { autoRefreshToken: false, persistSession: false }
+          });
 
           const { data, error } = await supabase
             .from("users")
