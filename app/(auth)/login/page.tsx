@@ -58,13 +58,16 @@ export default function LoginPage() {
           {/* Logo & Title */}
           <div className="mb-8 text-center">
             {/* MTO Logo mark */}
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl"
+            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white p-1 shadow-xl"
               style={{
-                background: "linear-gradient(135deg, #DC143C 0%, #8B0000 100%)",
-                boxShadow: "0 8px 24px rgba(220,20,60,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+                boxShadow: "0 8px 24px rgba(220,20,60,0.4), inset 0 1px 0 rgba(255,255,255,0.8)",
               }}
             >
-              <span className="text-2xl font-black tracking-tighter text-white">M</span>
+              <img
+                src="/mto-logo.png"
+                alt="MTO Logo"
+                className="h-full w-full rounded-full object-cover"
+              />
             </div>
 
             <h1 className="text-2xl font-bold tracking-tight text-foreground">

@@ -116,13 +116,16 @@ export function Sidebar({ onClose }: SidebarProps) {
         style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
       >
         <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-black text-white text-lg"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white p-0.5 shadow-md"
           style={{
-            background: "linear-gradient(135deg, #DC143C 0%, #8B0000 100%)",
             boxShadow: "0 4px 14px rgba(220,20,60,0.35)",
           }}
         >
-          M
+          <img
+            src="/mto-logo.png"
+            alt="MTO Logo"
+            className="h-full w-full rounded-full object-cover"
+          />
         </div>
         <div>
           <p className="text-sm font-bold text-foreground leading-tight">MTO-Hub</p>
