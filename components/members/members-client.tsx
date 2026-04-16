@@ -268,7 +268,7 @@ function MemberCard({
           <p className="text-xs text-muted-foreground">{member.nim}</p>
         </div>
         {isAdmin && (
-          <Shield size={14} color={color} className="shrink-0" title="Admin" />
+          <Shield size={14} color={color} className="shrink-0" />
         )}
       </div>
 
