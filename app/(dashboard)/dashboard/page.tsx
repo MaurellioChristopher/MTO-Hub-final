@@ -113,7 +113,7 @@ export default function DashboardPage() {
   const dept      = session?.user?.department ?? "—";
   const now       = new Date();
   const bulan     = now.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
-  const today     = now.toISOString().split("T")[0];
+  const today     = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   useEffect(() => {
     fetch("/api/events/this-month")

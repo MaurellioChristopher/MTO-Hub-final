@@ -9,7 +9,11 @@ import {
   type ProkerCategory,
 } from "@/lib/proker-data";
 
-const TODAY = new Date().toISOString().split("T")[0];
+const TODAY = (() => {
+  if (typeof window === "undefined") return "2026-03-01"; // Fallback SSG
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+})();
 
 // Urutan bulan
 const MONTHS = Object.keys(MONTH_LABELS);

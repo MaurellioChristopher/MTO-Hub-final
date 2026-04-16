@@ -86,12 +86,17 @@ function getInitials(name: string) {
   return name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
 }
 
+function getLocalTodayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function isUpcoming(date: string) {
-  return date >= new Date().toISOString().split("T")[0];
+  return date >= getLocalTodayStr();
 }
 
 function isToday(date: string) {
-  return date === new Date().toISOString().split("T")[0];
+  return date === getLocalTodayStr();
 }
 
 function getEventTag(title: string) {
@@ -213,7 +218,7 @@ export default function AttendancePage() {
   const unmarked = members.length - present - excused - absent;
 
   // ── Proker reference (nearby events) ───────────────────────────────────────
-  const TODAY_STR = new Date().toISOString().split("T")[0];
+  const TODAY_STR = getLocalTodayStr();
   const nearbyProker = PROKER_DATA.filter((p) => p.date >= TODAY_STR).slice(0, 12);
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -578,7 +583,7 @@ export default function AttendancePage() {
 function EventCard({
   event, upcoming, onClick,
 }: { event: AttendanceEvent; upcoming: boolean; onClick: () => void }) {
-  const today  = new Date().toISOString().split("T")[0];
+  const today  = getLocalTodayStr();
   const isNow  = event.date === today;
   const tag    = getEventTag(event.title);
   const d      = new Date(event.date);
