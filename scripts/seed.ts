@@ -30,11 +30,11 @@ const members: MemberInput[] = [
   // ─── INTI ─────────────────────────────────────────────────────────────────
   { name: "Maurellio Christoper Yonathan", nim: "102022430009", role: "Admin", department: "INTI", shortName: "Maurell"   },
   { name: "Sasi Azhari Kirana Putri",      nim: "102012340370", role: "Admin", department: "INTI", shortName: "Sasi"      },
-  { name: "Cinta Sari Hasbullah",          nim: "102012330384", role: "User",  department: "INTI", shortName: "Cinta"     },
-  { name: "Alya Salma Khoerunisaa",        nim: "102022430027", role: "User",  department: "INTI", shortName: "Alya"      },
+  { name: "Cinta Sari Hasbullah",          nim: "102012330384", role: "Admin",  department: "INTI", shortName: "Cinta"     },
+  { name: "Alya Salma Khoerunisaa",        nim: "102022430027", role: "Admin",  department: "INTI", shortName: "Alya"      },
 
   // ─── MI ───────────────────────────────────────────────────────────────────
-  { name: "Nadya Shandi Waranggani",       nim: "102022430030", role: "User",  department: "MI",   shortName: "Nadya"     },
+  { name: "Nadya Shandi Waranggani",       nim: "102022430030", role: "Admin",  department: "MI",   shortName: "Nadya"     },
   { name: "Siti Fadhilah Nur Nisrina",     nim: "102022400069", role: "User",  department: "MI",   shortName: "Siti"      },
   { name: "Mochamad Aldino",               nim: "102012530043", role: "User",  department: "MI",   shortName: "Aldino"    },
   { name: "Arsy Ananda Hidayatullah",      nim: "102022500061", role: "User",  department: "MI",   shortName: "Arsy"      },
@@ -43,7 +43,7 @@ const members: MemberInput[] = [
   { name: "Muhammad Daffa Fachrurozi",     nim: "102022400151", role: "User",  department: "MI",   shortName: "Daffa"     },
 
   // ─── MP ───────────────────────────────────────────────────────────────────
-  { name: "Rakean Ahmad Zayyid Ardhi",     nim: "102022400160", role: "User",  department: "MP",   shortName: "Rakean"    },
+  { name: "Rakean Ahmad Zayyid Ardhi",     nim: "102022400160", role: "Admin",  department: "MP",   shortName: "Rakean"    },
   { name: "Muhammad Farhan Adly",          nim: "102022400149", role: "User",  department: "MP",   shortName: "Farhan"    },
   { name: "Aisya Husna Fatihah",           nim: "102012500084", role: "User",  department: "MP",   shortName: "Aisya"     },
   { name: "Salsabila Febrianti",           nim: "102012300252", role: "User",  department: "MP",   shortName: "Salsa"     },
@@ -51,7 +51,7 @@ const members: MemberInput[] = [
   { name: "Aurora Aquifa Pramesti",        nim: "102022500058", role: "User",  department: "MP",   shortName: "Aurora"    },
 
   // ─── SD ───────────────────────────────────────────────────────────────────
-  { name: "I Nyoman Aditya Wahyu Nugraha", nim: "102012340269", role: "User",  department: "SD",   shortName: "Aditya"    },
+  { name: "I Nyoman Aditya Wahyu Nugraha", nim: "102012340269", role: "Admin",  department: "SD",   shortName: "Aditya"    },
   { name: "Annisa Shabrina",               nim: "102012500273", role: "User",  department: "SD",   shortName: "Annisa"    },
   { name: "Moch Fasya Fawana Adi Sagara",  nim: "102022400029", role: "User",  department: "SD",   shortName: "Fasya"     },
   { name: "Asep Ahmad Nugraha",            nim: "102032500074", role: "User",  department: "SD",   shortName: "Asep"      },
@@ -62,7 +62,7 @@ const members: MemberInput[] = [
   { name: "Naifah Bratandari",             nim: "102022400048", role: "User",  department: "SD",   shortName: "Naifah"    },
 
   // ─── SI ───────────────────────────────────────────────────────────────────
-  { name: "Deasy Hana Luisya Manurung",    nim: "102022400208", role: "User",  department: "SI",   shortName: "Deasy"     },
+  { name: "Deasy Hana Luisya Manurung",    nim: "102022400208", role: "Admin",  department: "SI",   shortName: "Deasy"     },
   { name: "Baiq Anjany Nabila Abranti",    nim: "102012400349", role: "User",  department: "SI",   shortName: "Baiq"      },
   { name: "Muhammad Noval Agustian",       nim: "102022400013", role: "User",  department: "SI",   shortName: "Noval"     },
   { name: "Siti Zakiyah Iqrima Cantika",   nim: "102022530029", role: "User",  department: "SI",   shortName: "Zakiyah"   },
