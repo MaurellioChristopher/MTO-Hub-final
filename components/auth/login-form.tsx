@@ -18,10 +18,10 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
   const [shake, setShake] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -30,7 +30,8 @@ export function LoginForm() {
       return;
     }
 
-    startTransition(async () => {
+    setIsPending(true);
+    try {
       const result = await signIn("credentials", {
         username: username.trim(),
         password,
@@ -39,11 +40,16 @@ export function LoginForm() {
 
       if (result?.error) {
         triggerError("Username atau password salah. Silakan coba lagi.");
-      } else {
+      } else if (result?.ok) {
         router.push(callbackUrl);
         router.refresh();
       }
-    });
+    } catch (err) {
+      console.error(err);
+      triggerError("Terjadi kesalahan sistem. Coba lagi.");
+    } finally {
+      setIsPending(false);
+    }
   };
 
   function triggerError(msg: string) {
