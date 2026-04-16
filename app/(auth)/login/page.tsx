@@ -100,7 +100,7 @@ export default function LoginPage() {
 
         {/* Bottom tagline */}
         <p className="mt-6 text-center text-xs text-muted-foreground/60">
-          MTO 25/26 · Sistem Informasi Telkom University
+          Managerial Trainer Organization 25/26 Internal Website
         </p>
       </div>
     </main>
