@@ -41,8 +41,7 @@ export function LoginForm() {
       if (result?.error) {
         triggerError("Username atau password salah. Silakan coba lagi.");
       } else if (result?.ok) {
-        router.push(callbackUrl);
-        router.refresh();
+        window.location.href = callbackUrl;
       }
     } catch (err) {
       console.error(err);
