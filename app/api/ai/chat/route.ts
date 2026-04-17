@@ -8,10 +8,10 @@ async function getMTOContext(): Promise<string> {
   try {
     const supabase = getServerClient();
 
-    const { data: proker } = await supabase
-      .from("proker")
-      .select("nama, tanggal, status, departemen")
-      .order("tanggal", { ascending: true })
+    const { data: events } = await supabase
+      .from("events")
+      .select("title, date, description, location")
+      .order("date", { ascending: true })
       .limit(20);
 
     const { data: pengumuman } = await supabase
@@ -51,15 +51,15 @@ async function getMTOContext(): Promise<string> {
       ctx += "\n";
     }
 
-    if (proker?.length) {
+    if (events?.length) {
       ctx += `=== PROKER / AGENDA MTO ===\n`;
-      proker.forEach((p) => {
-        const tgl = p.tanggal
-          ? new Date(p.tanggal).toLocaleDateString("id-ID", {
-              day: "numeric", month: "long", year: "numeric",
+      events.forEach((e) => {
+        const tgl = e.date
+          ? new Date(e.date).toLocaleDateString("id-ID", {
+              weekday: "long", day: "numeric", month: "long", year: "numeric",
             })
           : "TBD";
-        ctx += `- [${p.departemen}] ${p.nama} — ${tgl} (${p.status})\n`;
+        ctx += `- ${e.title} — ${tgl}${e.location ? ` (${e.location})` : ""}${e.description ? `: ${e.description.slice(0, 80)}` : ""}\n`;
       });
       ctx += "\n";
     }
