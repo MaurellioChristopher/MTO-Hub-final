@@ -34,28 +34,28 @@ const members: MemberInput[] = [
   { name: "Alya Salma Khoerunisaa",        nim: "102022430027", role: "Admin",  department: "INTI", shortName: "Alya"      },
 
   // ─── MI ───────────────────────────────────────────────────────────────────
-  { name: "Nadya Shandi Waranggani",       nim: "102022430030", role: "Admin",  department: "MI",   shortName: "Nadya"     },
+  { name: "Nadya Shandi Waranggani",       nim: "102012430030", role: "Admin",  department: "MI",   shortName: "Nadya"     },
   { name: "Siti Fadhilah Nur Nisrina",     nim: "102022400069", role: "User",  department: "MI",   shortName: "Siti"      },
   { name: "Mochamad Aldino",               nim: "102012530043", role: "User",  department: "MI",   shortName: "Aldino"    },
   { name: "Arsy Ananda Hidayatullah",      nim: "102022500061", role: "User",  department: "MI",   shortName: "Arsy"      },
-  { name: "Fiina Saisabila",               nim: "102012300130", role: "User",  department: "MI",   shortName: "Fiina"     },
+  { name: "Fiina Salsabila",               nim: "102012300130", role: "User",  department: "MI",   shortName: "Fiina"     },
   { name: "Galuh Shafa Auliana Rahman",    nim: "102022400131", role: "User",  department: "MI",   shortName: "Galuh"     },
   { name: "Muhammad Daffa Fachrurozi",     nim: "102022400151", role: "User",  department: "MI",   shortName: "Daffa"     },
 
   // ─── MP ───────────────────────────────────────────────────────────────────
   { name: "Rakean Ahmad Zayyid Ardhi",     nim: "102022400160", role: "Admin",  department: "MP",   shortName: "Rakean"    },
   { name: "Muhammad Farhan Adly",          nim: "102022400149", role: "User",  department: "MP",   shortName: "Farhan"    },
-  { name: "Aisya Husna Fatihah",           nim: "102012500084", role: "User",  department: "MP",   shortName: "Aisya"     },
+  { name: "Aisya Husna Falihah",           nim: "102012500084", role: "User",  department: "MP",   shortName: "Aisya"     },
   { name: "Salsabila Febrianti",           nim: "102012300252", role: "User",  department: "MP",   shortName: "Salsa"     },
   { name: "Affan Maulana Raffi",           nim: "102022300224", role: "User",  department: "MP",   shortName: "Affan"     },
-  { name: "Aurora Aquifa Pramesti",        nim: "102022500058", role: "User",  department: "MP",   shortName: "Aurora"    },
+  { name: "Aurora Aquilla Pramesti",       nim: "102022500058", role: "User",  department: "MP",   shortName: "Aurora"    },
 
   // ─── SD ───────────────────────────────────────────────────────────────────
   { name: "I Nyoman Aditya Wahyu Nugraha", nim: "102012340269", role: "Admin",  department: "SD",   shortName: "Aditya"    },
   { name: "Annisa Shabrina",               nim: "102012500273", role: "User",  department: "SD",   shortName: "Annisa"    },
-  { name: "Moch Fasya Fawana Adi Sagara",  nim: "102022400029", role: "User",  department: "SD",   shortName: "Fasya"     },
+  { name: "Moch Fasya Fawana Adi Sagara",  nim: "102032400029", role: "User",  department: "SD",   shortName: "Fasya"     },
   { name: "Asep Ahmad Nugraha",            nim: "102032500074", role: "User",  department: "SD",   shortName: "Asep"      },
-  { name: "Minati Nur Alifa",              nim: "102022400079", role: "User",  department: "SD",   shortName: "Minati"    },
+  { name: "Minati Nur Alifa",              nim: "102032400079", role: "User",  department: "SD",   shortName: "Minati"    },
   { name: "Mutiara Nabila Putri Muslim",   nim: "102032400070", role: "User",  department: "SD",   shortName: "Mutiara"   },
   { name: "Maulida Kyla Firamadani",       nim: "102022400075", role: "User",  department: "SD",   shortName: "Maulida"   },
   { name: "Ahmad Nabili Akmal",            nim: "102012500122", role: "User",  department: "SD",   shortName: "Nabili"    },
@@ -63,7 +63,7 @@ const members: MemberInput[] = [
 
   // ─── SI ───────────────────────────────────────────────────────────────────
   { name: "Deasy Hana Luisya Manurung",    nim: "102022400208", role: "Admin",  department: "SI",   shortName: "Deasy"     },
-  { name: "Baiq Anjany Nabila Abranti",    nim: "102012400349", role: "User",  department: "SI",   shortName: "Baiq"      },
+  { name: "Baiq Anjany Nabila Abrianti",   nim: "102012400349", role: "User",  department: "SI",   shortName: "Baiq"      },
   { name: "Muhammad Noval Agustian",       nim: "102022400013", role: "User",  department: "SI",   shortName: "Noval"     },
   { name: "Siti Zakiyah Iqrima Cantika",   nim: "102022530029", role: "User",  department: "SI",   shortName: "Zakiyah"   },
   { name: "Agum Jati Gumelar",             nim: "102032500076", role: "User",  department: "SI",   shortName: "Agum"      },
