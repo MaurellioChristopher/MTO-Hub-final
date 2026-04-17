@@ -223,7 +223,7 @@ export function MTOBot() {
                 className="px-3 py-3"
                 style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
               >
-                <div className="rounded-2xl px-3 pt-2.5 pb-2"
+                <div className="flex items-center gap-2 rounded-2xl px-3 py-2"
                   style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
                   <textarea
                     ref={inputRef}
@@ -232,20 +232,17 @@ export function MTOBot() {
                     onKeyDown={handleKey}
                     placeholder="Tanya apa aja ke MTOBot..."
                     rows={1}
-                    className="w-full resize-none bg-transparent text-xs text-white outline-none placeholder:text-white/30 max-h-20 text-center placeholder:text-center"
+                    className="flex-1 resize-none bg-transparent text-xs text-white outline-none placeholder:text-white/30 max-h-20"
                   />
-                  <div className="flex items-center justify-between mt-1.5">
-                    <p className="text-[9px] text-white/20">Enter untuk kirim</p>
-                    <button
-                      onClick={() => sendMessage()}
-                      disabled={!input.trim() || loading}
-                      id="mtobot-send"
-                      className="flex h-6 w-6 items-center justify-center rounded-lg text-white transition-all hover:scale-105 disabled:opacity-30"
-                      style={{ background: "linear-gradient(135deg,#DC143C,#8B0000)" }}
-                    >
-                      {loading ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} />}
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => sendMessage()}
+                    disabled={!input.trim() || loading}
+                    id="mtobot-send"
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-white transition-all hover:scale-105 disabled:opacity-30"
+                    style={{ background: "linear-gradient(135deg,#DC143C,#8B0000)" }}
+                  >
+                    {loading ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                  </button>
                 </div>
                 <p className="mt-1.5 text-center text-[9px] text-white/20">
                   MTOBot bisa salah — verifikasi info penting ke admin 😊
