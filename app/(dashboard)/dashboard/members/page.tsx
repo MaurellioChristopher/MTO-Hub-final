@@ -15,7 +15,7 @@ async function getMembers(): Promise<Member[]> {
     const supabase = getServerClient();
     const { data, error } = await supabase
       .from("users")
-      .select("id, name, nim, email, role, department, is_active, created_at")
+      .select("id, name, nim, email, role, department, is_active, created_at, bio, avatar_url, social_links")
       .eq("is_active", true)
       .order("department")
       .order("name");
