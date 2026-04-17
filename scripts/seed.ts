@@ -29,9 +29,9 @@ interface MemberInput {
 const members: MemberInput[] = [
   // ─── INTI ─────────────────────────────────────────────────────────────────
   { name: "Maurellio Christopher Yonathan", nim: "102022430009", role: "Admin", department: "INTI", shortName: "Maurell"   },
-  { name: "Sasi Azhari Kirana Putri",      nim: "102012340370", role: "Admin", department: "INTI", shortName: "Sasi"      },
   { name: "Cinta Sari Hasbullah",          nim: "102012330384", role: "Admin",  department: "INTI", shortName: "Cinta"     },
-  { name: "Alya Salma Khoerunisaa",        nim: "102022430027", role: "Admin",  department: "INTI", shortName: "Alya"      },
+  { name: "Alya Salma Khoerunnisaa",       nim: "102022430027", role: "Admin",  department: "INTI", shortName: "Alya"      },
+  { name: "Sela Aulia Rokhmasari",         nim: "102012330089", role: "Admin",  department: "INTI", shortName: "Sela"      },
 
   // ─── MI ───────────────────────────────────────────────────────────────────
   { name: "Nadya Shandi Waranggani",       nim: "102012430030", role: "Admin",  department: "MI",   shortName: "Nadya"     },
