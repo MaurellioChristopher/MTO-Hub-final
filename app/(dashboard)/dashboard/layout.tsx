@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Navbar } from "@/components/dashboard/navbar";
+import { MTOBot } from "@/components/ai/mtobot";
 
 export default function DashboardLayout({
   children,
@@ -22,6 +23,9 @@ export default function DashboardLayout({
           </div>
         </main>
       </div>
+
+      {/* MTOBot — Floating AI Chatbot */}
+      <MTOBot />
     </div>
   );
 }
