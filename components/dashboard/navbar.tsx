@@ -440,7 +440,7 @@ export function Navbar() {
 
             {/* Actions */}
             <DropdownMenuItem 
-              onClick={() => { router.push("/dashboard/settings"); }}
+              onSelect={() => { router.push("/dashboard/settings"); }}
               className="cursor-pointer gap-2 py-2.5 px-3 focus:bg-white/5"
             >
               <Settings size={14} className="text-muted-foreground" />
@@ -450,7 +450,7 @@ export function Navbar() {
             <DropdownMenuSeparator className="bg-white/5" />
             
             <DropdownMenuItem 
-              onClick={() => signOut({ callbackUrl: "/login" })}
+              onSelect={() => signOut({ callbackUrl: "/login" })}
               className="cursor-pointer gap-2 py-2.5 px-3 text-red-500 focus:bg-red-500/10 focus:text-red-500"
             >
               <LogOut size={14} />
