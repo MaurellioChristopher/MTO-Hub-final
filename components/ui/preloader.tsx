@@ -12,13 +12,13 @@ export function Preloader() {
     const tick = () => {
       if (i < steps.length) {
         setProgress(steps[i++]);
-        setTimeout(tick, i === steps.length ? 50 : 30);
+        setTimeout(tick, i === steps.length ? 350 : Math.random() * 50 + 100);
       } else {
-        setTimeout(() => setPhase("done"),   20);
-        setTimeout(() => setPhase("hidden"), 270);
+        setTimeout(() => setPhase("done"),   100);
+        setTimeout(() => setPhase("hidden"), 800);
       }
     };
-    setTimeout(tick, 20);
+    setTimeout(tick, 100);
   }, []);
 
   if (phase === "hidden") return null;
@@ -60,7 +60,7 @@ export function Preloader() {
             "radial-gradient(ellipse at 70% 80%, rgba(212,175,55,0.09) 0%, transparent 60%)," +
             "#07070D",
           opacity: phase === "done" ? 0 : 1,
-          transition: "opacity 0.25s cubic-bezier(0.4,0,0.2,1)",
+          transition: "opacity 0.7s cubic-bezier(0.4,0,0.2,1)",
           pointerEvents: phase === "done" ? "none" : "all",
           userSelect: "none",
         }}
