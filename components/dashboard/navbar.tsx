@@ -439,23 +439,23 @@ export function Navbar() {
             <DropdownMenuSeparator className="bg-white/5" />
 
             {/* Actions */}
-            <DropdownMenuItem 
-              onSelect={() => { router.push("/dashboard/settings"); }}
-              className="cursor-pointer gap-2 py-2.5 px-3 focus:bg-white/5"
+            <button
+              onClick={() => router.push("/dashboard/settings")}
+              className="w-full flex items-center gap-2 rounded-md px-3 py-2.5 text-sm text-foreground hover:bg-white/5 cursor-pointer transition-colors"
             >
               <Settings size={14} className="text-muted-foreground" />
-              <span className="text-sm">Pengaturan Akun</span>
-            </DropdownMenuItem>
-            
-            <DropdownMenuSeparator className="bg-white/5" />
-            
-            <DropdownMenuItem 
-              onSelect={() => signOut({ callbackUrl: "/login" })}
-              className="cursor-pointer gap-2 py-2.5 px-3 text-red-500 focus:bg-red-500/10 focus:text-red-500"
+              <span>Pengaturan Akun</span>
+            </button>
+
+            <div className="my-1 h-px bg-white/5" />
+
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="w-full flex items-center gap-2 rounded-md px-3 py-2.5 text-sm text-red-500 hover:bg-red-500/10 cursor-pointer transition-colors font-bold"
             >
               <LogOut size={14} />
-              <span className="text-sm font-bold">Keluar Sesi</span>
-            </DropdownMenuItem>
+              <span>Keluar Sesi</span>
+            </button>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
