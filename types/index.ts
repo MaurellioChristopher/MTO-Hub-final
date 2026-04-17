@@ -12,6 +12,7 @@ export interface User {
   role: UserRole;
   department: Department;
   avatar_url?: string | null;
+  bio?: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -89,6 +90,7 @@ declare module "next-auth" {
       email: string;
       role: UserRole;
       department: Department;
+      bio?: string | null;
     };
   }
 
@@ -99,5 +101,6 @@ declare module "next-auth" {
     email: string;
     role: UserRole;
     department: Department;
+    bio?: string | null;
   }
 }

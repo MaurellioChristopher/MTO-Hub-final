@@ -5,10 +5,18 @@ import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Image as ImageIcon, UploadCloud, CheckCircle2, AlertCircle, Loader2,
-  Trash2, X, Plus, Calendar, Type, Captions, Maximize2
+  Trash2, X, Plus, Calendar, Type, Captions, Maximize2, MessageSquare, Send
 } from "lucide-react";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+interface GalleryComment {
+  id: string;
+  user_id: string;
+  comment_text: string;
+  created_at: string;
+  commenter_name: string;
+  commenter_dept: string;
+}
+
 interface GalleryPost {
   id: string;
   user_id: string;
@@ -19,6 +27,7 @@ interface GalleryPost {
   created_at: string;
   uploader_name: string;
   uploader_dept: string;
+  comments?: GalleryComment[];
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -40,6 +49,10 @@ export default function GalleryPage() {
   const [eventDate, setEventDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Comments state
+  const [commentInput, setCommentInput] = useState("");
+  const [submittingComment, setSubmittingComment] = useState(false);
 
   // Lightbox state
   const [selectedImage, setSelectedImage] = useState<GalleryPost | null>(null);
@@ -130,10 +143,40 @@ export default function GalleryPage() {
       if (!res.ok) throw new Error("Gagal menghapus galeri");
       showToast("Foto berhasil dihapus.", true);
       setPosts((prev) => prev.filter((p) => p.id !== id));
+      if (selectedImage?.id === id) setSelectedImage(null);
     } catch {
       showToast("Terjadi kesalahan sistem saat menghapus.", false);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedImage || !commentInput.trim()) return;
+
+    setSubmittingComment(true);
+    try {
+      const res = await fetch("/api/gallery/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: selectedImage.id, comment: commentInput.trim() }),
+      });
+
+      if (!res.ok) throw new Error("Gagal mengirim komentar");
+
+      setCommentInput("");
+      
+      // Refresh posts silently to get new comments, and update current selectedImage
+      const fetched = await fetch("/api/gallery").then(r => r.json());
+      setPosts(Array.isArray(fetched) ? fetched : []);
+      const updatedPost = (fetched || []).find((p: GalleryPost) => p.id === selectedImage.id);
+      if (updatedPost) setSelectedImage(updatedPost);
+
+    } catch (err: any) {
+      showToast(err.message, false);
+    } finally {
+      setSubmittingComment(false);
     }
   };
 
@@ -402,6 +445,12 @@ export default function GalleryPage() {
                       <span className="bg-black/50 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] font-medium border border-white/10">
                         Oleh: <span className="text-[#A855F7] font-bold">{post.uploader_name.split(" ")[0]}</span>
                       </span>
+                      {post.comments && post.comments.length > 0 && (
+                        <span className="bg-black/50 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] font-bold border border-white/10 flex items-center gap-1">
+                          <MessageSquare size={10} className="text-white" />
+                          {post.comments.length}
+                        </span>
+                      )}
                     </div>
 
                     <h3 className="font-bold text-base leading-tight mb-1 drop-shadow-md">{post.title}</h3>
@@ -483,11 +532,62 @@ export default function GalleryPage() {
                   {selectedImage.title}
                 </h3>
                 
-                <p className="text-sm text-white/70 leading-relaxed mb-6 whitespace-pre-wrap flex-1">
+                <p className="text-sm text-white/70 leading-relaxed mb-6 whitespace-pre-wrap flex-none">
                   {selectedImage.caption}
                 </p>
 
-                <div className="mt-auto pt-6 border-t border-white/10 flex items-center gap-3">
+                {/* Comments Section */}
+                <div className="flex-1 flex flex-col min-h-[150px] bg-white/5 rounded-2xl border border-white/5 overflow-hidden">
+                  <div className="bg-black/20 p-3 border-b border-white/5 font-bold text-xs sticky top-0 flex items-center gap-2 text-white">
+                    <MessageSquare size={14} className="text-[#A855F7]"/> Komentar ({selectedImage.comments?.length || 0})
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto p-3 space-y-3" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.2) transparent" }}>
+                    {(!selectedImage.comments || selectedImage.comments.length === 0) ? (
+                      <p className="text-xs text-muted-foreground text-center py-4">Belum ada komentar.</p>
+                    ) : (
+                      selectedImage.comments.map(c => (
+                        <div key={c.id} className="flex gap-2.5">
+                          <div className="w-6 h-6 rounded-full bg-[#A855F7]/20 flex items-center justify-center text-[#E879F9] font-black text-[10px] shrink-0">
+                            {c.commenter_name.substring(0,1).toUpperCase()}
+                          </div>
+                          <div className="bg-black/40 rounded-xl rounded-tl-sm p-2.5 border border-white/5 flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <span className="font-bold text-xs text-white truncate">{c.commenter_name}</span>
+                              <span className="text-[9px] text-muted-foreground shrink-0">
+                                {new Date(c.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            </div>
+                            <p className="text-xs text-white/80 whitespace-pre-wrap">{c.comment_text}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  
+                  {/* Review / Comment Input */}
+                  <form onSubmit={handleCommentSubmit} className="p-2 border-t border-white/5 bg-black/40">
+                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-2 py-1.5 focus-within:border-[#A855F7]/50 focus-within:bg-black transition-all">
+                      <input
+                        type="text"
+                        value={commentInput}
+                        onChange={(e) => setCommentInput(e.target.value)}
+                        placeholder="Komentar Anda..."
+                        disabled={submittingComment}
+                        className="flex-1 bg-transparent text-xs text-white outline-none px-1 h-8 placeholder:text-muted-foreground"
+                      />
+                      <button 
+                        type="submit" 
+                        disabled={submittingComment || !commentInput.trim()}
+                        className="w-8 h-8 rounded-lg flex flex-shrink-0 items-center justify-center bg-[#A855F7]/20 text-[#E879F9] hover:bg-[#A855F7] hover:text-white transition-colors disabled:opacity-50"
+                      >
+                        {submittingComment ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                <div className="mt-6 pt-5 border-t border-white/10 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-[#A855F7] to-[#8B5CF6] text-white font-black">
                     {selectedImage.uploader_name.substring(0,2).toUpperCase()}
                   </div>

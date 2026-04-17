@@ -1,26 +1,40 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, Send, CheckCircle2, AlertCircle, Loader2, Info } from "lucide-react";
+import { MessageSquare, Send, CheckCircle2, AlertCircle, Loader2, Info, Reply, CornerDownRight } from "lucide-react";
+
+interface AspirasiReply {
+  id: string;
+  aspirasi_id: string;
+  reply_text: string;
+  created_at: string;
+}
 
 interface Aspirasi {
   id: string;
   kategori: string;
   isi: string;
   created_at: string;
+  replies?: AspirasiReply[];
 }
 
 export default function AspirasiPage() {
+  const { data: session } = useSession();
   const [aspirasiList, setAspirasiList] = useState<Aspirasi[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Form State
+  // Form State (Aspirasi)
   const [isi, setIsi] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
-  // Fetch semua aspirasi
+  // Form State ( Replies )
+  const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
+  const [submittingReply, setSubmittingReply] = useState<string | null>(null);
+  const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
+
   useEffect(() => {
     fetchAspirasi();
   }, []);
@@ -66,6 +80,36 @@ export default function AspirasiPage() {
       showToast("Gagal mengirim aspirasi, coba lagi.", false);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleReplySubmit(aspirasiId: string) {
+    const text = replyInputs[aspirasiId];
+    if (!text || text.trim().length === 0) return;
+
+    if (!session) {
+      showToast("Anda harus login untuk membalas", false);
+      return;
+    }
+
+    setSubmittingReply(aspirasiId);
+    try {
+      const res = await fetch("/api/aspirasi/replies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ aspirasiId, reply: text.trim() }),
+      });
+
+      if (!res.ok) throw new Error();
+
+      showToast("Balasan berhasil dikirim! ✓", true);
+      setReplyInputs(prev => ({ ...prev, [aspirasiId]: "" }));
+      setActiveReplyId(null);
+      fetchAspirasi();
+    } catch {
+      showToast("Gagal mengirim balasan.", false);
+    } finally {
+      setSubmittingReply(null);
     }
   }
 
@@ -153,6 +197,68 @@ export default function AspirasiPage() {
                   <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
                     {asp.isi}
                   </p>
+
+                  {/* Replies List */}
+                  {asp.replies && asp.replies.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                      {asp.replies.map((reply) => (
+                        <div key={reply.id} className="flex gap-2.5">
+                          <CornerDownRight size={14} className="text-muted-foreground shrink-0 mt-0.5" />
+                          <div className="flex-1 bg-white/5 rounded-xl p-3 border border-white/5">
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <span className="text-xs font-bold text-white">Anonim</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {new Date(reply.created_at).toLocaleDateString("id-ID", {
+                                  day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
+                                })}
+                              </span>
+                            </div>
+                            <p className="text-xs text-white/80 whitespace-pre-wrap">{reply.reply_text}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Reply Button & Input */}
+                  <div className="mt-4 flex flex-col gap-2">
+                    {activeReplyId !== asp.id ? (
+                      <button
+                        onClick={() => setActiveReplyId(asp.id)}
+                        className="self-start flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-white transition-colors"
+                      >
+                        <Reply size={14} /> Balas
+                      </button>
+                    ) : (
+                      <div className="flex gap-2 items-end">
+                        <textarea
+                          placeholder="Tulis balasan anonim..."
+                          value={replyInputs[asp.id] || ""}
+                          onChange={(e) => setReplyInputs(prev => ({ ...prev, [asp.id]: e.target.value }))}
+                          className="flex-1 rounded-xl px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 transition-all resize-none border border-white/10 bg-black/40 outline-none focus:border-white/30 min-h-[40px]"
+                          disabled={submittingReply === asp.id}
+                        />
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => handleReplySubmit(asp.id)}
+                            disabled={submittingReply === asp.id || !(replyInputs[asp.id]?.trim())}
+                            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors disabled:opacity-50"
+                          >
+                            {submittingReply === asp.id ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setActiveReplyId(null);
+                              setReplyInputs(prev => ({ ...prev, [asp.id]: "" }));
+                            }}
+                            className="py-1 text-xs text-muted-foreground hover:text-red-400 text-center transition-colors"
+                          >
+                            Batal
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </motion.div>
               ))}
             </div>

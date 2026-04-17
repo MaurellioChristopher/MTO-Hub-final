@@ -28,6 +28,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.nim = (user as { nim: string }).nim;
         token.role = (user as { role: UserRole }).role;
         token.department = (user as { department: Department }).department;
+        token.bio = (user as { bio: string }).bio;
       }
       return token;
     },
@@ -38,6 +39,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.nim = token.nim as string;
         session.user.role = token.role as UserRole;
         session.user.department = token.department as Department;
+        session.user.bio = token.bio as string;
       }
       return session;
     },
@@ -72,7 +74,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
           const { data, error } = await supabase
             .from("users")
-            .select("id, name, nim, username, email, role, department, password_hash, is_active")
+            .select("id, name, nim, username, email, role, department, password_hash, is_active, bio")
             .eq("username", username)
             .single();
 
@@ -88,6 +90,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             email: data.email ?? `${data.nim}@mto-hub.id`,
             role: data.role as UserRole,
             department: data.department as Department,
+            bio: data.bio,
           };
         } catch (err) {
           console.error("Auth error:", err);

@@ -17,11 +17,30 @@ export async function GET() {
   const { data: users } = await supabase.from("users").select("id, name, department");
   const userMap = Object.fromEntries((users || []).map((u) => [u.id, u]));
 
-  const enriched = posts.map((p) => ({
-    ...p,
-    uploader_name: userMap[p.user_id]?.name || "Unbeknownst User",
-    uploader_dept: userMap[p.user_id]?.department || "??",
-  }));
+  const { data: comments } = await supabase
+    .from("gallery_comments")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  const enriched = posts.map((p) => {
+    const postComments = (comments || [])
+      .filter((c) => c.gallery_post_id === p.id)
+      .map((c) => ({
+        id: c.id,
+        user_id: c.user_id,
+        comment_text: c.comment_text,
+        created_at: c.created_at,
+        commenter_name: userMap[c.user_id]?.name || "Unbeknownst User",
+        commenter_dept: userMap[c.user_id]?.department || "??",
+      }));
+
+    return {
+      ...p,
+      uploader_name: userMap[p.user_id]?.name || "Unbeknownst User",
+      uploader_dept: userMap[p.user_id]?.department || "??",
+      comments: postComments,
+    };
+  });
 
   return NextResponse.json(enriched);
 }

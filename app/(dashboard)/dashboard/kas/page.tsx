@@ -49,8 +49,7 @@ function formatRp(amount: number) {
 export default function KasPage() {
   const { data: session } = useSession();
   
-  const isAdminOrBendahara = 
-    session?.user?.role === "Admin" || session?.user?.nim === BENDAHARA_NIM;
+  const isBendahara = session?.user?.nim === BENDAHARA_NIM;
 
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<Member[]>([]);
@@ -98,7 +97,7 @@ export default function KasPage() {
 
   // ── Toggle Payment ──────────────────────────────────────────────────────────
   async function togglePayment(userId: string, month: number) {
-    if (!isAdminOrBendahara) return; // guard
+    if (!isBendahara) return; // guard
 
     const cellKey = `${userId}-${month}`;
     if (savingCells.has(cellKey)) return;
@@ -191,9 +190,9 @@ export default function KasPage() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground flex items-center gap-1.5">
             Tagihan kas bulanan periode {year}
-            {isAdminOrBendahara && (
+            {isBendahara && (
               <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-bold text-[#F5D76E] bg-[#D4AF37]/10 px-2 py-0.5 rounded-md border border-[#D4AF37]/30">
-                <ShieldCheck size={11} /> Anda Bendahara / Admin
+                <ShieldCheck size={11} /> Akses Bendahara Aktif
               </span>
             )}
           </p>
@@ -353,10 +352,10 @@ export default function KasPage() {
                               style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
                             <button
                               onClick={() => togglePayment(user.id, monthNum)}
-                              disabled={!isAdminOrBendahara || isSaving}
+                              disabled={!isBendahara || isSaving}
                               className={`
                                 relative flex items-center justify-center w-7 h-7 mx-auto rounded-[6px] transition-all duration-300
-                                ${isAdminOrBendahara ? (isPaid ? "cursor-pointer" : "cursor-pointer hover:bg-white/10") : "cursor-default"}
+                                ${isBendahara ? (isPaid ? "cursor-pointer" : "cursor-pointer hover:bg-white/10") : "cursor-default"}
                               `}
                               style={{
                                 background: isPaid 
@@ -382,7 +381,7 @@ export default function KasPage() {
                               ) : null}
 
                               {/* Tooltip on hover (optional) */}
-                              {isAdminOrBendahara && !isPaid && !isSaving && (
+                              {isBendahara && !isPaid && !isSaving && (
                                 <span className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-10 rounded-[6px]" />
                               )}
                             </button>

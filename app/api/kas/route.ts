@@ -6,7 +6,8 @@ const BENDAHARA_NIM = "102022430027"; // Alya Salma Khoerunisaa
 
 async function isAuthorized(session: any) {
   if (!session?.user) return false;
-  return session.user.role === "Admin" || session.user.nim === BENDAHARA_NIM;
+  // Strictly only the Bendahara (Alya) can update cash records
+  return session.user.nim === BENDAHARA_NIM;
 }
 
 export async function GET(req: Request) {

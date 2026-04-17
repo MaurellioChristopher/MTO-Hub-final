@@ -11,7 +11,22 @@ export async function GET() {
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data ?? []);
+  if (!data || data.length === 0) return NextResponse.json([]);
+
+  const { data: replies } = await supabase
+    .from("aspirasi_replies")
+    .select("id, aspirasi_id, reply_text, created_at")
+    .order("created_at", { ascending: true });
+
+  const enriched = data.map((a) => {
+    const aspReplies = (replies || []).filter((r) => r.aspirasi_id === a.id);
+    return {
+      ...a,
+      replies: aspReplies,
+    };
+  });
+
+  return NextResponse.json(enriched);
 }
 
 // POST /api/aspirasi — kirim aspirasi anonim
