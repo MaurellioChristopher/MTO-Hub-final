@@ -8,8 +8,7 @@ dotenv.config({ path: ".env.local" });
 const dbUrl = process.env.DATABASE_URL_DIRECT || process.env.DATABASE_URL;
 
 if (!dbUrl) {
-  console.error("❌ DATABASE_URL_DIRECT atau DATABASE_URL tidak ditemukan di .env.local");
-  process.exit(1);
+  throw new Error("❌ DATABASE_URL_DIRECT atau DATABASE_URL tidak ditemukan di .env.local");
 }
 
 async function applyCommentsSchema() {
@@ -18,7 +17,7 @@ async function applyCommentsSchema() {
   const sqlPath = path.join(process.cwd(), "scripts", "migration-comments.sql");
   const sql = fs.readFileSync(sqlPath, "utf-8");
 
-  const sqlConn = postgres(dbUrl, { max: 1 });
+  const sqlConn = postgres(dbUrl as string, { max: 1 });
 
   try {
     // split the sql script into individual queries by semicolon to be safe,
