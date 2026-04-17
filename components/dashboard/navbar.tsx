@@ -1,10 +1,10 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { Bell, Menu, X, LogOut, User, Settings, Info, Edit2, Check, Loader2, Plus, Megaphone } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import {
   DropdownMenu,
@@ -40,6 +40,10 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
     title: "Feedback & Evaluasi",
     subtitle: "Formulir evaluasi event dan anggota",
   },
+  "/dashboard/settings": {
+    title: "Pengaturan Profil",
+    subtitle: "Edit foto, bio, dan social media kamu",
+  },
 };
 
 function getInitials(name: string) {
@@ -61,6 +65,7 @@ const deptColors: Record<string, string> = {
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session, update } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -435,7 +440,7 @@ export function Navbar() {
 
             {/* Actions */}
             <DropdownMenuItem 
-              onClick={() => toast.info("Fitur Pengaturan sedang dikembangkan! 🛠️")}
+              onClick={() => { router.push("/dashboard/settings"); }}
               className="cursor-pointer gap-2 py-2.5 px-3 focus:bg-white/5"
             >
               <Settings size={14} className="text-muted-foreground" />
