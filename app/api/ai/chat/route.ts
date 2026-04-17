@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import Groq from "groq-sdk";
 import { getServerClient } from "@/lib/db";
 import { auth } from "@/lib/auth";
 
@@ -55,7 +55,9 @@ async function getMTOContext(): Promise<string> {
       ctx += `=== PROKER / AGENDA MTO ===\n`;
       proker.forEach((p) => {
         const tgl = p.tanggal
-          ? new Date(p.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+          ? new Date(p.tanggal).toLocaleDateString("id-ID", {
+              day: "numeric", month: "long", year: "numeric",
+            })
           : "TBD";
         ctx += `- [${p.departemen}] ${p.nama} — ${tgl} (${p.status})\n`;
       });
@@ -82,9 +84,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: "API key belum dikonfigurasi di server" }, { status: 500 });
+    return NextResponse.json({ error: "API key belum dikonfigurasi" }, { status: 500 });
   }
 
   try {
@@ -96,48 +98,55 @@ export async function POST(req: Request) {
     const context  = await getMTOContext();
     const userName = session.user.name?.split(" ")[0] ?? "Bro";
 
-    const systemInstruction = `Kamu adalah MTOBot 🤖 — asisten AI resmi Managerial Trainer Organization (MTO) Institut Teknologi Kalimantan angkatan 25/26.
+    const systemPrompt = `Kamu adalah MTOBot 🤖 — asisten AI resmi Managerial Trainer Organization (MTO) Institut Teknologi Kalimantan angkatan 25/26.
 
 Kepribadianmu:
 - Santai, friendly, dan sedikit gokil tapi tetap sopan dan informatif
-- Pakai bahasa Indonesia kasual (boleh campur sedikit bahasa gaul: "wkwk", "dong", "nih", "guys")
+- Pakai bahasa Indonesia kasual (boleh campur sedikit bahasa gaul: "wkwk", "dong", "nih", "guys")  
 - Kalau ditanya hal serius (jadwal, absensi, proker), jawab dengan akurat dan jelas
 - Kalau ditanya hal random/lucu atau pertanyaan matematika, tetap jawab dengan fun
 - Sering pakai emoji biar lebih hidup
 - Panggil user dengan nama: ${userName}
-- Jawaban maksimal 3 paragraf, jangan kepanjangan
+- Jawaban maksimal 3 paragraf singkat, jangan kepanjangan
+- Kalau tidak tahu, bilang jujur dan arahkan ke admin
+- Jangan pernah berbicara negatif tentang anggota MTO
 
-${context}`;
+${context}
 
-    const ai = new GoogleGenAI({ apiKey });
+Ingat: kamu tahu semua info MTO di atas, gunakan untuk menjawab pertanyaan dengan akurat!`;
 
-    // Build conversation contents
-    const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
+    const groq = new Groq({ apiKey });
 
-    // Add history
+    // Build messages dengan history
+    const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+      { role: "system", content: systemPrompt },
+    ];
+
+    // Tambah history percakapan sebelumnya
     if (history?.length) {
-      for (const h of history) {
-        contents.push({
-          role: h.role === "bot" ? "model" : "user",
-          parts: [{ text: h.text }],
+      for (const h of history.slice(-10)) { // max 10 pesan terakhir
+        messages.push({
+          role: h.role === "bot" ? "assistant" : "user",
+          content: h.text,
         });
       }
     }
 
-    // Add current message
-    contents.push({ role: "user", parts: [{ text: message }] });
+    // Tambah pesan saat ini
+    messages.push({ role: "user", content: message });
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-lite",
-      config: { systemInstruction },
-      contents,
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages,
+      max_tokens: 512,
+      temperature: 0.8,
     });
 
-    const reply = response.text ?? "Hmm, aku bingung nih 😅";
+    const reply = completion.choices[0]?.message?.content ?? "Hmm, aku bingung nih 😅";
     return NextResponse.json({ reply });
 
   } catch (err: any) {
-    console.error("[MTOBot] Gemini error:", err?.message ?? err);
+    console.error("[MTOBot] Groq error:", err?.message ?? err);
     return NextResponse.json(
       { error: `Error: ${err?.message ?? "Unknown error"}` },
       { status: 500 }
