@@ -128,7 +128,7 @@ ${context}`;
     contents.push({ role: "user", parts: [{ text: message }] });
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-1.5-flash",
       config: { systemInstruction },
       contents,
     });
