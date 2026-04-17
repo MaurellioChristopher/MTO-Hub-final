@@ -8,7 +8,10 @@ import {
   Users, CalendarCheck, Trophy, TrendingUp,
   Clock, Star, Calendar, ArrowRight, CalendarDays,
   MessageSquare, Zap, ChevronRight, Sparkles, Wallet, Camera,
+  Megaphone, Pin, PinOff, Trash2, Plus, X, Loader2, AlertTriangle,
+  CheckCircle2, AlertCircle,
 } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
 import { PROKER_DATA, CATEGORY_CONFIG } from "@/lib/proker-data";
 
 // ── Dept config ───────────────────────────────────────────────────────────────
@@ -82,6 +85,25 @@ interface EventItem {
   location?: string;
 }
 
+interface Pengumuman {
+  id: string;
+  author_id: string;
+  title: string;
+  content: string;
+  category: string;
+  is_pinned: boolean;
+  created_at: string;
+  author_name: string;
+  author_dept: string;
+}
+
+const ANNOUNCE_COLORS: Record<string, { bg: string; text: string; border: string; icon: string }> = {
+  Penting:  { bg: "rgba(220,20,60,0.12)",   text: "#F87171", border: "rgba(220,20,60,0.35)",   icon: "🚨" },
+  Acara:    { bg: "rgba(212,175,55,0.12)",   text: "#FACC15", border: "rgba(212,175,55,0.35)",  icon: "🎉" },
+  Keuangan: { bg: "rgba(34,197,94,0.12)",    text: "#4ADE80", border: "rgba(34,197,94,0.35)",   icon: "💰" },
+  Umum:     { bg: "rgba(99,102,241,0.12)",   text: "#818CF8", border: "rgba(99,102,241,0.35)",  icon: "📢" },
+};
+
 function getEventType(title: string) {
   const t = title.toLowerCase();
   if (t.includes("appraisal"))  return { color: "#D4AF37", label: "Appraisals" };
@@ -108,6 +130,19 @@ export default function DashboardPage() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
 
+  // ── Pengumuman state ──
+  const [announcements, setAnnouncements] = useState<Pengumuman[]>([]);
+  const [loadingAnn, setLoadingAnn]       = useState(true);
+  const [annModal, setAnnModal]           = useState(false);
+  const [annTitle, setAnnTitle]           = useState("");
+  const [annContent, setAnnContent]       = useState("");
+  const [annCategory, setAnnCategory]     = useState("Umum");
+  const [annPinned, setAnnPinned]         = useState(false);
+  const [annSubmitting, setAnnSubmitting] = useState(false);
+  const [annDeletingId, setAnnDeletingId] = useState<string | null>(null);
+  const [toast, setToast]                 = useState<{ msg: string; ok: boolean } | null>(null);
+  const [expandedId, setExpandedId]       = useState<string | null>(null);
+
   const firstName = session?.user?.name?.split(" ")[0] ?? "...";
   const isAdmin   = session?.user?.role === "Admin";
   const dept      = session?.user?.department ?? "—";
@@ -115,16 +150,72 @@ export default function DashboardPage() {
   const bulan     = now.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
   const today     = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
+  function showToast(msg: string, ok: boolean) {
+    setToast({ msg, ok });
+    setTimeout(() => setToast(null), 3500);
+  }
+
+  const fetchAnnouncements = () => {
+    setLoadingAnn(true);
+    fetch("/api/pengumuman?limit=10")
+      .then((r) => r.ok ? r.json() : [])
+      .then((d) => setAnnouncements(Array.isArray(d) ? d : []))
+      .catch(() => {})
+      .finally(() => setLoadingAnn(false));
+  };
+
   useEffect(() => {
     fetch("/api/events/this-month")
       .then((r) => r.ok ? r.json() : [])
       .then(setEvents)
       .catch(() => {})
       .finally(() => setLoadingEvents(false));
+    fetchAnnouncements();
   }, []);
 
   const upcoming = events.filter((e) => e.date >= today).slice(0, 6);
   const pastCnt  = events.filter((e) => e.date < today).length;
+
+  const handleAnnSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!annTitle.trim() || !annContent.trim()) { showToast("Judul dan isi wajib diisi", false); return; }
+    setAnnSubmitting(true);
+    try {
+      const res = await fetch("/api/pengumuman", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: annTitle, content: annContent, category: annCategory, is_pinned: annPinned }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      showToast("📢 Pengumuman berhasil dipublikasikan!", true);
+      setAnnModal(false);
+      setAnnTitle(""); setAnnContent(""); setAnnCategory("Umum"); setAnnPinned(false);
+      fetchAnnouncements();
+    } catch (err: any) { showToast(err.message, false); }
+    finally { setAnnSubmitting(false); }
+  };
+
+  const handleTogglePin = async (id: string, current: boolean) => {
+    try {
+      await fetch("/api/pengumuman", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, is_pinned: !current }),
+      });
+      fetchAnnouncements();
+    } catch { showToast("Gagal mengubah pin", false); }
+  };
+
+  const handleDeleteAnn = async (id: string) => {
+    if (!confirm("Hapus pengumuman ini?")) return;
+    setAnnDeletingId(id);
+    try {
+      await fetch(`/api/pengumuman?id=${id}`, { method: "DELETE" });
+      setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+      showToast("Pengumuman dihapus.", true);
+    } catch { showToast("Gagal menghapus.", false); }
+    finally { setAnnDeletingId(null); }
+  };
 
   // Proker teaser: next 5 items from today
   const nextProker = PROKER_DATA.filter((p) => p.date >= today).slice(0, 5);
@@ -132,6 +223,90 @@ export default function DashboardPage() {
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-8">
+
+      {/* ── Global Toast ── */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 24, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-2xl"
+            style={{ background: toast.ok ? "linear-gradient(135deg,#22C55E,#16A34A)" : "linear-gradient(135deg,#DC143C,#8B0000)" }}
+          >
+            {toast.ok ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+            {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Pengumuman Modal (Admin) ── */}
+      <AnimatePresence>
+        {annModal && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/75 backdrop-blur-sm"
+              onClick={() => !annSubmitting && setAnnModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-3xl p-6 shadow-2xl"
+              style={{ background: "#0D0D14", border: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <Megaphone size={20} className="text-[#DC143C]" /> Buat Pengumuman
+                </h2>
+                <button onClick={() => !annSubmitting && setAnnModal(false)} className="rounded-full p-1.5 hover:bg-white/10 text-muted-foreground">
+                  <X size={18} />
+                </button>
+              </div>
+              <form onSubmit={handleAnnSubmit} className="space-y-3.5">
+                <input
+                  value={annTitle} onChange={(e) => setAnnTitle(e.target.value)}
+                  placeholder="Judul pengumuman..."
+                  className="w-full rounded-xl px-4 py-3 text-sm outline-none border border-white/10 bg-white/5 focus:ring-2 focus:ring-[#DC143C]/40"
+                  maxLength={200} disabled={annSubmitting}
+                />
+                <select
+                  value={annCategory} onChange={(e) => setAnnCategory(e.target.value)}
+                  disabled={annSubmitting}
+                  className="w-full rounded-xl px-4 py-3 text-sm outline-none border border-white/10 bg-[#0D0D14] text-foreground focus:ring-2 focus:ring-[#DC143C]/40"
+                >
+                  {["Umum", "Penting", "Acara", "Keuangan"].map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <textarea
+                  value={annContent} onChange={(e) => setAnnContent(e.target.value)}
+                  placeholder="Isi pengumuman..."
+                  rows={4}
+                  className="w-full resize-none rounded-xl px-4 py-3 text-sm outline-none border border-white/10 bg-white/5 focus:ring-2 focus:ring-[#DC143C]/40"
+                  maxLength={1000} disabled={annSubmitting}
+                />
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <div
+                    onClick={() => setAnnPinned(!annPinned)}
+                    className="w-10 h-5 rounded-full transition-all duration-300 flex items-center px-0.5"
+                    style={{ background: annPinned ? "#DC143C" : "rgba(255,255,255,0.1)" }}
+                  >
+                    <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform duration-300 ${annPinned ? "translate-x-5" : "translate-x-0"}`} />
+                  </div>
+                  <span className="text-xs font-semibold text-muted-foreground">📌 Sematkan di atas</span>
+                </label>
+                <button
+                  type="submit" id="btn-submit-pengumuman"
+                  disabled={annSubmitting || !annTitle.trim() || !annContent.trim()}
+                  className="w-full rounded-xl py-3 text-sm font-bold text-white transition-all disabled:opacity-40"
+                  style={{ background: "linear-gradient(135deg,#DC143C,#8B0000)", boxShadow: "0 4px 20px rgba(220,20,60,0.3)" }}
+                >
+                  {annSubmitting ? <span className="flex items-center justify-center gap-2"><Loader2 size={15} className="animate-spin" /> Memposting...</span> : "📢 Publikasikan"}
+                </button>
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ══════════════════════════════════════════════════════════
           HERO — Welcome banner
@@ -200,6 +375,154 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+      </motion.div>
+
+      {/* ══════════════════════════════════════════════════════════
+          PAPAN PENGUMUMAN
+      ══════════════════════════════════════════════════════════ */}
+      <motion.div {...fadeUp(0.05)}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-xl" style={{ background: "rgba(220,20,60,0.15)", border: "1px solid rgba(220,20,60,0.3)" }}>
+              <Megaphone size={14} className="text-[#DC143C]" />
+            </div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">Papan Pengumuman</p>
+            {announcements.filter(a => a.is_pinned).length > 0 && (
+              <span className="rounded-full px-2 py-0.5 text-[9px] font-black" style={{ background: "rgba(220,20,60,0.15)", color: "#F87171" }}>
+                {announcements.filter(a => a.is_pinned).length} PINNED
+              </span>
+            )}
+          </div>
+          {isAdmin && (
+            <button
+              onClick={() => setAnnModal(true)}
+              id="btn-add-pengumuman"
+              className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold text-white transition-all hover:scale-105"
+              style={{ background: "linear-gradient(135deg,#DC143C,#8B0000)", boxShadow: "0 4px 14px rgba(220,20,60,0.3)" }}
+            >
+              <Plus size={13} /> Buat
+            </button>
+          )}
+        </div>
+
+        {loadingAnn ? (
+          <div className="flex items-center gap-3 py-6 px-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <Loader2 size={18} className="animate-spin text-[#DC143C]" />
+            <p className="text-sm text-muted-foreground">Memuat pengumuman...</p>
+          </div>
+        ) : announcements.length === 0 ? (
+          <div className="flex items-center gap-3 py-6 px-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.07)" }}>
+            <Megaphone size={22} className="opacity-20 text-[#DC143C]" />
+            <div>
+              <p className="text-sm font-semibold text-muted-foreground">Belum ada pengumuman</p>
+              <p className="text-xs text-muted-foreground/50 mt-0.5">{isAdmin ? "Klik \"Buat\" untuk post pengumuman pertama." : "Admin belum memposting pengumuman."}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {announcements.map((ann, i) => {
+              const cfg = ANNOUNCE_COLORS[ann.category] || ANNOUNCE_COLORS["Umum"];
+              const isExpanded = expandedId === ann.id;
+              const relTime = (() => {
+                const diff = Date.now() - new Date(ann.created_at).getTime();
+                const mins = Math.floor(diff / 60000);
+                if (mins < 60) return mins <= 1 ? "Baru saja" : `${mins} menit lalu`;
+                const hrs = Math.floor(mins / 60);
+                if (hrs < 24) return `${hrs} jam lalu`;
+                return new Date(ann.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+              })();
+              return (
+                <motion.div
+                  key={ann.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="group relative overflow-hidden rounded-2xl transition-all duration-200"
+                  style={{
+                    background: ann.is_pinned ? cfg.bg : "rgba(255,255,255,0.025)",
+                    border: ann.is_pinned ? `1px solid ${cfg.border}` : "1px solid rgba(255,255,255,0.07)",
+                  }}
+                >
+                  {/* Pinned left border accent */}
+                  {ann.is_pinned && (
+                    <div className="absolute bottom-0 left-0 top-0 w-1 rounded-l-2xl" style={{ background: cfg.text }} />
+                  )}
+
+                  <div
+                    className="flex cursor-pointer items-start gap-3 px-5 py-3.5"
+                    onClick={() => setExpandedId(isExpanded ? null : ann.id)}
+                  >
+                    {/* Category emoji */}
+                    <span className="mt-0.5 text-base shrink-0">{cfg.icon}</span>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                        {ann.is_pinned && (
+                          <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest" style={{ color: cfg.text }}>
+                            <Pin size={9} /> Disematkan
+                          </span>
+                        )}
+                        <span className="rounded px-1.5 py-0.5 text-[9px] font-black uppercase" style={{ background: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}` }}>
+                          {ann.category}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground/50">{relTime}</span>
+                      </div>
+                      <p className="text-sm font-bold text-foreground leading-snug">{ann.title}</p>
+                      <AnimatePresence initial={false}>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.25, ease: "easeInOut" }}
+                            className="overflow-hidden"
+                          >
+                            <p className="mt-2 text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{ann.content}</p>
+                            <p className="mt-2 text-[10px] text-muted-foreground/40">
+                              Oleh <span className="font-bold text-muted-foreground/60">{ann.author_name}</span> · {ann.author_dept}
+                            </p>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                      {!isExpanded && (
+                        <p className="mt-0.5 text-xs text-muted-foreground/50 line-clamp-1">{ann.content}</p>
+                      )}
+                    </div>
+
+                    {/* Chevron */}
+                    <ChevronRight
+                      size={15}
+                      className="shrink-0 mt-1 text-muted-foreground/40 transition-transform duration-200"
+                      style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}
+                    />
+                  </div>
+
+                  {/* Admin actions — visible on hover */}
+                  {isAdmin && (
+                    <div className="flex items-center gap-1 px-5 pb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <button
+                        onClick={() => handleTogglePin(ann.id, ann.is_pinned)}
+                        className="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-bold transition-colors hover:bg-white/10"
+                        style={{ color: ann.is_pinned ? cfg.text : "rgba(255,255,255,0.3)" }}
+                      >
+                        {ann.is_pinned ? <PinOff size={11} /> : <Pin size={11} />}
+                        {ann.is_pinned ? "Lepas Pin" : "Sematkan"}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAnn(ann.id)}
+                        disabled={annDeletingId === ann.id}
+                        className="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-bold text-muted-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      >
+                        {annDeletingId === ann.id ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                        Hapus
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
       </motion.div>
 
       {/* ══════════════════════════════════════════════════════════
