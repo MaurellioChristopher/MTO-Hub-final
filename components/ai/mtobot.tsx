@@ -148,7 +148,7 @@ export function MTOBot() {
                   </p>
                   <p className="text-[10px] text-green-400 flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-green-400 inline-block" />
-                    Online • Powered by Gemini AI
+                    Online • Powered for MTO
                   </p>
                 </div>
                 <button
@@ -230,7 +230,7 @@ export function MTOBot() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKey}
-                    placeholder="Tanya apa aja ke MTOBot..."
+                    placeholder="Tanya apa aja ke MTOBot..." style={{ textAlign: 'center' }}
                     rows={1}
                     className="flex-1 resize-none bg-transparent text-xs text-white outline-none placeholder:text-white/30 max-h-20"
                   />
