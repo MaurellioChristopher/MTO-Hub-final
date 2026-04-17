@@ -17,6 +17,7 @@ import {
   UserCircle,
   Wallet,
   Camera,
+  FolderArchive,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +71,11 @@ const navItems: NavItem[] = [
     label: "Uang Kas",
     href: "/dashboard/kas",
     icon: Wallet,
+  },
+  {
+    label: "Arsip Berkas",
+    href: "/dashboard/arsip",
+    icon: FolderArchive,
   },
 ];
 
