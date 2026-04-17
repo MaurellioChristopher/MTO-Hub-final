@@ -75,8 +75,8 @@ export function MTOBot() {
       const botReply = data.reply ?? data.error ?? "Hmm, aku bingung nih 😅";
       setMessages([...newMessages, { role: "bot", text: botReply }]);
       if (!open) setUnread((u) => u + 1);
-    } catch {
-      setMessages([...newMessages, { role: "bot", text: "Koneksi error nih, coba lagi ya~ 😅" }]);
+    } catch (e: any) {
+      setMessages([...newMessages, { role: "bot", text: `Koneksi error: ${e?.message ?? "unknown"} 😅` }]);
     } finally {
       setLoading(false);
     }
