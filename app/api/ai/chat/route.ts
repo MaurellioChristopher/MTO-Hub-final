@@ -8,13 +8,13 @@ async function getMTOContext(): Promise<string> {
   try {
     const supabase = getServerClient();
 
-    const todayStr = new Date().toISOString().split("T")[0]; // "2026-04-18"
+    const todayStr = new Date().toISOString().split("T")[0];
     const { data: events } = await supabase
       .from("events")
       .select("title, date, description, location")
       .gte("date", todayStr)
       .order("date", { ascending: true })
-      .limit(15);
+      .limit(100);
 
     const { data: pengumuman } = await supabase
       .from("pengumuman")
