@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, Send, CheckCircle2, AlertCircle, Loader2, Info, Reply, CornerDownRight } from "lucide-react";
+import { MessageSquare, Send, CheckCircle2, AlertCircle, Loader2, Info, Reply, CornerDownRight, Trash2 } from "lucide-react";
 
 interface AspirasiReply {
   id: string;
@@ -113,6 +113,23 @@ export default function AspirasiPage() {
     }
   }
 
+  async function handleDeleteAspirasi(id: string) {
+    if (!window.confirm("Hapus aspirasi ini secara permanen?")) return;
+
+    try {
+      const res = await fetch(`/api/aspirasi?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        showToast("Aspirasi berhasil dihapus.", true);
+        fetchAspirasi();
+      } else {
+        const data = await res.json();
+        showToast(data.error || "Gagal menghapus aspirasi.", false);
+      }
+    } catch {
+      showToast("Kesalahan sistem saat menghapus.", false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <AnimatePresence>
@@ -174,7 +191,7 @@ export default function AspirasiPage() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="rounded-2xl p-5 relative overflow-hidden"
+                  className="group rounded-2xl p-5 relative overflow-hidden"
                   style={{
                     background: "rgba(79,142,247,0.04)",
                     border: "1px solid rgba(79,142,247,0.15)",
@@ -192,6 +209,16 @@ export default function AspirasiPage() {
                         day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit"
                       })}
                     </span>
+                    
+                    {session?.user?.role === "Admin" && (
+                      <button
+                        onClick={() => handleDeleteAspirasi(asp.id)}
+                        className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-red-500 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                        title="Hapus Aspirasi"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                   
                   <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">

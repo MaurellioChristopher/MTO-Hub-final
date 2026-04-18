@@ -58,34 +58,42 @@ export async function POST(req: Request) {
     const title = formData.get("title") as string;
     const caption = formData.get("caption") as string;
     const eventDate = formData.get("eventDate") as string;
+    const driveLink = formData.get("driveLink") as string;
     const file = formData.get("file") as File;
 
-    if (!file || !title || !caption || !eventDate) {
+    // Validation: Title, Caption, and Date are always required.
+    // File is required UNLESS a driveLink is provided.
+    if (!title || !caption || !eventDate) {
       return NextResponse.json({ error: "Data tidak lengkap" }, { status: 400 });
     }
 
-    const supabase = getServerClient();
-
-    // 1. Upload ke Storage
-    // Format nama file: timestamp-namarandom.png
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("gallery")
-      .upload(fileName, file, { cacheControl: "3600", upsert: false });
-
-    if (uploadError) {
-      console.error("Storage upload error:", uploadError);
-      return NextResponse.json({ error: "Gagal mengunggah gambar ke storage: " + uploadError.message }, { status: 500 });
+    if (!file && !driveLink) {
+      return NextResponse.json({ error: "Unggah foto atau sertakan link Google Drive" }, { status: 400 });
     }
 
-    // 2. Dapatkan Public URL
-    const { data: publicUrlData } = supabase.storage
-      .from("gallery")
-      .getPublicUrl(fileName);
+    const supabase = getServerClient();
+    let imageUrl = null;
 
-    const imageUrl = publicUrlData.publicUrl;
+    // 1. Upload to Storage only if file exists
+    if (file && file.size > 0) {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("gallery")
+        .upload(fileName, file, { cacheControl: "3600", upsert: false });
+
+      if (uploadError) {
+        console.error("Storage upload error:", uploadError);
+        return NextResponse.json({ error: "Gagal mengunggah thumbnail ke storage: " + uploadError.message }, { status: 500 });
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("gallery")
+        .getPublicUrl(fileName);
+
+      imageUrl = publicUrlData.publicUrl;
+    }
 
     // 3. Simpan ke database
     const { error: dbError } = await supabase.from("gallery_posts").insert({
@@ -94,6 +102,7 @@ export async function POST(req: Request) {
       caption,
       event_date: eventDate,
       image_url: imageUrl,
+      drive_link: driveLink?.trim() || null,
     });
 
     if (dbError) throw dbError;
@@ -119,8 +128,6 @@ export async function DELETE(req: Request) {
 
   const supabase = getServerClient();
 
-  // Pastikan yang menghapus adalah pemiliknya atau admin
-  // Pertama, get post
   const { data: post, error: getErr } = await supabase
     .from("gallery_posts")
     .select("user_id, image_url")
@@ -133,13 +140,13 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: "Hanya pemilik/Admin yang bisa menghapus" }, { status: 403 });
   }
 
-  // 1. Ekstrak nama file dari URL
-  // getPublicUrl hasil formnya misal: https://vxyz.supabase.co/storage/v1/object/public/gallery/12345.png
-  const fileNameMatches = post.image_url.match(/\/gallery\/(.+)$/);
-  if (fileNameMatches && fileNameMatches[1]) {
-    const fileName = fileNameMatches[1];
-    // Hapus dari storage (jangan ditangkap errornya jika gagal hapus storage, DB hapus tetep lanjut)
-    await supabase.storage.from("gallery").remove([fileName]);
+  // 1. Ekstrak nama file dari URL jika ada
+  if (post.image_url) {
+    const fileNameMatches = post.image_url.match(/\/gallery\/(.+)$/);
+    if (fileNameMatches && fileNameMatches[1]) {
+      const fileName = fileNameMatches[1];
+      await supabase.storage.from("gallery").remove([fileName]);
+    }
   }
 
   // 2. Hapus dari database

@@ -5,7 +5,8 @@ import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Image as ImageIcon, UploadCloud, CheckCircle2, AlertCircle, Loader2,
-  Trash2, X, Plus, Calendar, Type, Captions, Maximize2, MessageSquare, Send
+  Trash2, X, Plus, Calendar, Type, Captions, Maximize2, MessageSquare, Send,
+  HardDrive
 } from "lucide-react";
 
 interface GalleryComment {
@@ -23,6 +24,7 @@ interface GalleryPost {
   title: string;
   caption: string;
   image_url: string;
+  drive_link?: string;
   event_date: string;
   created_at: string;
   uploader_name: string;
@@ -39,6 +41,7 @@ export default function GalleryPage() {
   const [posts, setPosts] = useState<GalleryPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<'photo' | 'drive' | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   // Form states
@@ -46,6 +49,7 @@ export default function GalleryPage() {
   const [preview, setPreview] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
+  const [driveLink, setDriveLink] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -103,17 +107,27 @@ export default function GalleryPage() {
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !title.trim() || !caption.trim() || !eventDate) {
-      showToast("Semua kolom harus diisi beserta gambar", false);
+    
+    const isPhoto = modalType === 'photo';
+    const isDrive = modalType === 'drive';
+
+    if (isPhoto && (!file || !title.trim() || !caption.trim() || !eventDate)) {
+      showToast("Semua kolom harus diisi beserta foto", false);
+      return;
+    }
+
+    if (isDrive && (!driveLink.trim() || !title.trim() || !caption.trim() || !eventDate)) {
+      showToast("Judul, Link Drive, dan Deskripsi wajib diisi", false);
       return;
     }
 
     setSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      if (file) formData.append("file", file);
       formData.append("title", title.trim());
       formData.append("caption", caption.trim());
+      formData.append("driveLink", driveLink.trim());
       formData.append("eventDate", eventDate);
 
       const res = await fetch("/api/gallery", {
@@ -186,7 +200,9 @@ export default function GalleryPage() {
     setPreview(null);
     setTitle("");
     setCaption("");
+    setDriveLink("");
     setEventDate("");
+    setModalType(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -214,37 +230,38 @@ export default function GalleryPage() {
       </AnimatePresence>
 
       {/* ── Header ── */}
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2.5">
-            <ImageIcon size={24} className="text-[#A855F7]" />
-            Galeri{" "}
-            <span style={{
-              background: "linear-gradient(135deg,#A855F7,#E879F9)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}>
-              MTO
-            </span>
+            <ImageIcon size={26} className="text-[#A855F7]" />
+            Galeri <span className="text-[#E879F9]">MTO</span>
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground flex items-center gap-1.5">
-            Dokumentasi kenang-kenangan cerita kegiatan kita seangkatan. 
+          <p className="mt-1 text-sm text-muted-foreground">
+            Dokumentasi kenang-kenangan cerita kegiatan kita seangkatan.
           </p>
         </div>
 
-        {/* Action Button */}
-        <button
-          onClick={() => setModalOpen(true)}
-          className="group flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold text-white transition-all duration-300 hover:scale-[1.02]"
-          style={{
-            background: "linear-gradient(135deg,#A855F7,#E879F9)",
-            boxShadow: "0 8px 32px rgba(168,85,247,0.3)",
-          }}
-        >
-          <Plus size={18} className="transition-transform group-hover:rotate-90" />
-          Tambah Kenangan
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => { setModalType('photo'); setModalOpen(true); }}
+            className="group flex grow sm:grow-0 items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold text-white transition-all duration-300 hover:scale-[1.02]"
+            style={{
+              background: "linear-gradient(135deg,#A855F7,#8B5CF6)",
+              boxShadow: "0 8px 32px rgba(168,85,247,0.3)",
+            }}
+          >
+            <Plus size={18} className="transition-transform group-hover:rotate-90" />
+            Tambah Momen Foto
+          </button>
+
+          <button
+            onClick={() => { setModalType('drive'); setModalOpen(true); }}
+            className="group flex grow sm:grow-0 items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold text-white transition-all duration-300 border border-white/10 bg-white/5 hover:bg-white/10 hover:scale-[1.02]"
+          >
+            <HardDrive size={18} className="text-[#A855F7]" />
+            Tambah Link Dokumentasi
+          </button>
+        </div>
       </div>
 
       {/* ── Upload Modal ── */}
@@ -269,7 +286,7 @@ export default function GalleryPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold flex items-center gap-2">
                   <UploadCloud className="text-[#A855F7]" size={22} />
-                  Upload Momen
+                  {modalType === 'photo' ? 'Tambah Momen Foto' : 'Arsip Dokumentasi Baru'}
                 </h2>
                 <button onClick={() => !submitting && setModalOpen(false)} disabled={submitting}
                   className="rounded-full p-1.5 hover:bg-white/10 text-muted-foreground transition-colors">
@@ -278,56 +295,60 @@ export default function GalleryPage() {
               </div>
 
               <form onSubmit={handleUploadSubmit} className="space-y-4">
-                {/* Image Picker */}
-                <div 
-                  className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-all overflow-hidden cursor-pointer ${
-                    preview ? 'border-transparent bg-black' : 'border-white/10 hover:border-[#A855F7]/50 hover:bg-[#A855F7]/5'
-                  }`}
-                  style={{ minHeight: "220px" }}
-                  onClick={() => !submitting && fileInputRef.current?.click()}
-                >
-                  {preview ? (
-                    <img src={preview} alt="Preview" className="absolute inset-0 w-full h-full object-contain" />
-                  ) : (
-                    <div className="text-center p-6 pointer-events-none">
-                      <ImageIcon size={40} className="mx-auto mb-3 opacity-30 text-[#A855F7]" />
-                      <p className="text-sm font-semibold text-foreground">Klik untuk pilih gambar</p>
-                      <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WEBP (Maks 5MB)</p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {/* Upload Thumbnail - Only shown for Photos */}
+                  {modalType === 'photo' && (
+                    <div className="flex-1 min-w-[200px]">
+                      <label className="mb-1.5 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground/60 pl-1">
+                        <ImageIcon size={12} /> Unggah Foto
+                      </label>
+                      <div 
+                        onClick={() => !submitting && fileInputRef.current?.click()}
+                        className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-all overflow-hidden cursor-pointer ${
+                          preview ? 'border-transparent bg-black' : 'border-white/10 bg-white/5 hover:border-[#A855F7]/30'
+                        }`}
+                        style={{ minHeight: "140px" }}
+                      >
+                        {preview ? (
+                          <img src={preview} alt="Preview" className="absolute inset-0 w-full h-full object-contain" />
+                        ) : (
+                          <div className="text-center p-4 pointer-events-none">
+                            <ImageIcon size={32} className="mx-auto mb-2 opacity-30 text-[#A855F7]" />
+                            <p className="text-xs font-semibold text-foreground">Pilih Gambar</p>
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/jpeg, image/png, image/webp, image/gif"
+                          className="hidden"
+                          ref={fileInputRef}
+                          onChange={handleFileChange}
+                          disabled={submitting}
+                        />
+                      </div>
                     </div>
                   )}
-                  {preview && (
-                    <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                      <p className="text-white font-bold text-sm bg-black/60 px-4 py-2 rounded-xl backdrop-blur-md">Ganti Gambar</p>
-                    </div>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/jpeg, image/png, image/webp, image/gif"
-                    className="hidden"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    disabled={submitting}
-                  />
+
+                  {/* Title */}
+                  <div className="flex-[2]">
+                    <label className="mb-1.5 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground/60 pl-1">
+                      <Type size={12}/> Judul {modalType === 'photo' ? 'Momen' : 'Dokumentasi'}
+                    </label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder={modalType === 'photo' ? "Contoh: Chaos bettt 🏊‍♂️" : "Contoh: Dokumentasi Liburan Angkatan"}
+                      className="w-full rounded-xl px-4 py-3.5 text-sm outline-none transition-all focus:ring-2 focus:ring-[#A855F7]/50 border border-white/10 bg-white/5"
+                      disabled={submitting}
+                      maxLength={100}
+                    />
+                  </div>
                 </div>
 
-                {/* Metadata */}
-                <div>
-                  <label className="mb-1.5 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground/60 pl-1">
-                    <Type size={12}/> Judul Lucu / Acara
-                  </label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Contoh: Panik sebelum acara mulai 🏃‍♂️"
-                    className="w-full rounded-xl px-4 py-3.5 text-sm outline-none transition-all focus:ring-2 focus:ring-[#A855F7]/50 border border-white/10 bg-white/5"
-                    disabled={submitting}
-                    maxLength={100}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2 sm:col-span-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Date */}
+                  <div>
                     <label className="mb-1.5 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground/60 pl-1">
                       <Calendar size={12}/> Tanggal Memori
                     </label>
@@ -339,16 +360,33 @@ export default function GalleryPage() {
                       disabled={submitting}
                     />
                   </div>
+
+                  {/* Drive Link - Only shown for Drive Links */}
+                  {modalType === 'drive' && (
+                    <div>
+                      <label className="mb-1.5 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground/60 pl-1">
+                        <Send size={12}/> Link Google Drive
+                      </label>
+                      <input
+                        type="url"
+                        value={driveLink}
+                        onChange={(e) => setDriveLink(e.target.value)}
+                        placeholder="https://drive.google.com/..."
+                        className="w-full rounded-xl px-4 py-3.5 text-sm outline-none transition-all focus:ring-2 focus:ring-[#A855F7]/50 border border-white/10 bg-white/5"
+                        disabled={submitting}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <label className="mb-1.5 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground/60 pl-1">
-                    <Captions size={12}/> Caption / Makna
+                    <Captions size={12}/> {modalType === 'photo' ? 'Caption' : 'Deskripsi Dokumentasi'}
                   </label>
                   <textarea
                     value={caption}
                     onChange={(e) => setCaption(e.target.value)}
-                    placeholder="Ceritakan momen dibalik gambar ini..."
+                    placeholder="Ceritakan sedikit tentang memori ini..."
                     className="w-full h-24 resize-none rounded-xl px-4 py-3 text-sm outline-none transition-all focus:ring-2 focus:ring-[#A855F7]/50 border border-white/10 bg-white/5"
                     disabled={submitting}
                     maxLength={500}
@@ -357,17 +395,18 @@ export default function GalleryPage() {
 
                 <button
                   type="submit"
-                  disabled={submitting || !file || !title || !caption || !eventDate}
-                  className="w-full rounded-xl py-3.5 text-sm font-bold text-white transition-all duration-300 disabled:opacity-40"
+                  disabled={submitting || (modalType === 'photo' ? !file : !driveLink) || !title || !caption || !eventDate}
+                  className="w-full rounded-xl py-4 text-sm font-bold text-white transition-all duration-300 disabled:opacity-40"
                   style={{
-                    background: (!file || !title || !caption || !eventDate) 
+                    background: (submitting || (modalType === 'photo' ? !file : !driveLink) || !title || !caption || !eventDate) 
                       ? "rgba(255,255,255,0.1)" 
                       : "linear-gradient(135deg,#A855F7,#E879F9)",
+                    boxShadow: (submitting || (modalType === 'photo' ? !file : !driveLink) || !title || !caption || !eventDate) ? "none" : "0 8px 24px rgba(168,85,247,0.3)"
                   }}
                 >
                   {submitting ? (
-                    <span className="flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" /> Mengunggah...</span>
-                  ) : "✈️ Unggah Foto Ke Galeri"}
+                    <span className="flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" /> Sedang Menyimpan...</span>
+                  ) : `🚀 Simpan ${modalType === 'photo' ? 'Momen Foto' : 'Link Dokumentasi'}`}
                 </button>
               </form>
             </motion.div>
@@ -375,8 +414,14 @@ export default function GalleryPage() {
         )}
       </AnimatePresence>
 
-      {/* ── Gallery Masonry / Grid ── */}
-      <div className="pt-4">
+      {/* ── Content Sections ── */}
+      <div className="pt-4 space-y-12">
+        {/* SECTION 1: Galeri Momen (Tanpa Link Drive) */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-bold text-foreground pr-4 border-r border-white/10">Kenangan MTO</h2>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">Kumpulan Foto Momen</p>
+          </div>
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
             <Loader2 size={32} className="animate-spin mb-3 text-[#A855F7]" />
@@ -398,10 +443,9 @@ export default function GalleryPage() {
           </div>
         ) : (
           <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-5 space-y-5">
-            {posts.map((post) => {
+            {posts.filter(p => !p.drive_link).map((post) => {
               const isOwner = post.user_id === userId;
               const isDeletingThis = deletingId === post.id;
-              // Format date cleanly
               const dateObj = new Date(post.event_date);
               const formattedDate = dateObj.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 
@@ -480,6 +524,71 @@ export default function GalleryPage() {
             })}
           </div>
         )}
+        </section>
+
+        {/* SECTION 2: Dokumentasi Lengkap (Dengan Link Drive) */}
+        {posts.some(p => p.drive_link) && (
+          <section className="pt-8 border-t border-white/5 space-y-6">
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-bold text-foreground pr-4 border-r border-white/10">Arsip Dokumentasi</h2>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">Link Google Drive Lengkap</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {posts.filter(p => p.drive_link).map((post) => {
+                const isOwner = post.user_id === userId;
+                const isDeletingThis = deletingId === post.id;
+                const dateObj = new Date(post.event_date);
+                const formattedDate = dateObj.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+
+                return (
+                  <motion.div 
+                    key={post.id}
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col gap-4 p-5 rounded-3xl bg-white/5 border border-white/10 hover:border-[#A855F7]/30 transition-all group shadow-sm"
+                  >
+                    {/* Info */}
+                    <div className="flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-[#A855F7] bg-[#A855F7]/10 px-2 py-0.5 rounded">Dokumentasi</span>
+                            <span className="text-[10px] text-muted-foreground">{formattedDate}</span>
+                          </div>
+                          {(isOwner || isAdmin) && (
+                            <button 
+                              onClick={() => handleDelete(post.id)}
+                              disabled={isDeletingThis}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                            >
+                              {isDeletingThis ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                            </button>
+                          )}
+                        </div>
+                        <h3 className="font-bold text-foreground text-base mb-1">{post.title}</h3>
+                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mb-4">
+                          {post.caption}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-auto">
+                        <a 
+                          href={post.drive_link} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#A855F7] to-[#9333EA] text-white text-[11px] font-bold hover:shadow-[0_4px_12px_rgba(168,85,247,0.3)] transition-all active:scale-95"
+                        >
+                          <HardDrive size={14} /> Buka Google Drive
+                        </a>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </div>
 
       {/* ── Lightbox (Fullscreen Preview) Modal ── */}
@@ -535,7 +644,7 @@ export default function GalleryPage() {
                 <p className="text-sm text-white/70 leading-relaxed mb-6 whitespace-pre-wrap flex-none">
                   {selectedImage.caption}
                 </p>
-
+                
                 {/* Comments Section */}
                 <div className="flex-1 flex flex-col min-h-[150px] bg-white/5 rounded-2xl border border-white/5 overflow-hidden">
                   <div className="bg-black/20 p-3 border-b border-white/5 font-bold text-xs sticky top-0 flex items-center gap-2 text-white">

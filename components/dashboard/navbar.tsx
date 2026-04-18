@@ -336,7 +336,7 @@ export function Navbar() {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <div className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity">
+              <button className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity outline-none">
                 <div className="hidden sm:block text-right">
                   <p className="text-xs font-semibold text-foreground leading-tight">
                     {session?.user?.name?.split(" ")[0] ?? "User"}
@@ -360,7 +360,7 @@ export function Navbar() {
                     {session?.user?.name ? getInitials(session.user.name) : "?"}
                   </AvatarFallback>
                 </Avatar>
-              </div>
+              </button>
             }
           />
           <DropdownMenuContent align="end" className="w-80 bg-[#0D0D14] border-white/10 p-3 shadow-2xl">

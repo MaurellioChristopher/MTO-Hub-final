@@ -9,10 +9,11 @@ import {
   Clock, Star, Calendar, ArrowRight, CalendarDays,
   MessageSquare, Zap, ChevronRight, Sparkles, Wallet, Camera,
   Megaphone, Pin, PinOff, Trash2, Plus, X, Loader2, AlertTriangle,
-  CheckCircle2, AlertCircle,
+  CheckCircle2, AlertCircle, Cake, Gift, PartyPopper
 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { PROKER_DATA, CATEGORY_CONFIG } from "@/lib/proker-data";
+import { BIRTHDAY_DATA, StaffBirthday } from "@/lib/birthday-data";
 
 // ── Dept config ───────────────────────────────────────────────────────────────
 const DEPT_CONFIG = [
@@ -219,6 +220,28 @@ export default function DashboardPage() {
 
   // Proker teaser: next 5 items from today
   const nextProker = PROKER_DATA.filter((p) => p.date >= today).slice(0, 5);
+
+  // ── Birthday Logic ──────────────────────────────────────────────────────────
+  const nowObj = new Date();
+  const currentMonth = nowObj.getMonth() + 1;
+  const currentDay = nowObj.getDate();
+
+  const todayBirthdays = BIRTHDAY_DATA.filter(b => b.month === currentMonth && b.day === currentDay);
+  
+  // Calculate upcoming birthdays (next 5)
+  const upcomingBirthdays = BIRTHDAY_DATA
+    .filter(b => !(b.month === currentMonth && b.day === currentDay))
+    .map(b => {
+      let daysUntil = 0;
+      const bDate = new Date(nowObj.getFullYear(), b.month - 1, b.day);
+      if (bDate < nowObj && !(b.month === currentMonth && b.day === currentDay)) {
+        bDate.setFullYear(nowObj.getFullYear() + 1);
+      }
+      daysUntil = Math.ceil((bDate.getTime() - nowObj.getTime()) / (1000 * 60 * 60 * 24));
+      return { ...b, daysUntil };
+    })
+    .sort((a, b) => a.daysUntil - b.daysUntil)
+    .slice(0, 4);
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -617,8 +640,89 @@ export default function DashboardPage() {
       ══════════════════════════════════════════════════════════ */}
       <motion.div {...fadeUp(0.18)} className="grid gap-6 lg:grid-cols-5">
 
-        {/* ── Events this month (3/5) ── */}
-        <div className="lg:col-span-3 space-y-4">
+        {/* ── Left Column (3/5) ── */}
+        <div className="lg:col-span-3 space-y-6">
+          
+          {/* 🎂 Birthday Reminder Widget */}
+          <section className="space-y-4">
+            <SectionLabel>Reminder Ulang Tahun</SectionLabel>
+            
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* Today's Special Card or First Upcoming */}
+              {todayBirthdays.length > 0 ? (
+                <motion.div 
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="relative overflow-hidden rounded-3xl p-5 sm:col-span-2"
+                  style={{
+                    background: "linear-gradient(135deg, #EC4899 0%, #A855F7 100%)",
+                    boxShadow: "0 8px 32px rgba(236,72,153,0.3)"
+                  }}
+                >
+                  <div className="absolute top-0 right-0 p-4 opacity-20 rotate-12">
+                    <PartyPopper size={80} />
+                  </div>
+                  <div className="relative z-10 flex items-center gap-4">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md border border-white/30">
+                      <Cake size={28} className="text-white" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-white/30 px-2 py-0.5 text-[10px] font-black text-white uppercase tracking-tighter animate-pulse">
+                          HARI INI! 🎉
+                        </span>
+                      </div>
+                      <h3 className="text-xl font-black text-white leading-tight mt-0.5">
+                        {todayBirthdays.map(b => b.name).join(" & ")}
+                      </h3>
+                      <p className="text-xs text-white/80 font-medium">Selamat ulang tahun! Semoga panjang umur dan sukses selalu!</p>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <div 
+                  className="rounded-2xl p-5 flex items-center gap-4"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
+                >
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#A855F7]15 border border-[#A855F7]25">
+                    <Gift size={22} className="text-[#A855F7]" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Terdekat</p>
+                    <p className="text-sm font-bold text-foreground">{upcomingBirthdays[0]?.name}</p>
+                    <p className="text-[10px] text-[#A855F7] font-black uppercase mt-0.5">
+                      {upcomingBirthdays[0]?.daysUntil} HARI LAGI
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Smaller List for others */}
+              <div className={`space-y-2 ${todayBirthdays.length > 0 ? 'sm:col-span-2' : ''}`}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {upcomingBirthdays.slice(todayBirthdays.length > 0 ? 0 : 1).map((b, i) => (
+                    <div 
+                      key={b.name}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all hover:bg-white/5"
+                      style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}
+                    >
+                      <div className="flex h-9 w-9 shrink-0 flex-col items-center justify-center rounded-lg bg-white/5 border border-white/10">
+                        <span className="text-[8px] font-bold text-muted-foreground leading-none">{b.day}</span>
+                        <span className="text-[10px] font-black text-foreground uppercase">{new Date(2000, b.month - 1).toLocaleString('id-ID', { month: 'short' })}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-bold text-foreground">{b.name}</p>
+                        <p className="text-[9px] text-muted-foreground">{b.daysUntil} hari lagi</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ── Events this month (3/5) ── */}
+          <div className="space-y-4">
           <div className="flex items-center justify-between">
             <SectionLabel>Event Bulan Ini — {bulan}</SectionLabel>
             <button
@@ -708,6 +812,7 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+      </div>
 
         {/* ── Proker Teaser (2/5) ── */}
         <div className="lg:col-span-2 space-y-4">

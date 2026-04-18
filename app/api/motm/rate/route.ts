@@ -17,6 +17,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Data tidak lengkap" }, { status: 400 });
   }
 
+  // Validasi: Hanya bisa menilai untuk bulan/tahun berjalan
+  const now = new Date();
+  const curMonth = now.getMonth() + 1;
+  const curYear = now.getFullYear();
+
+  if (Number(month) !== curMonth || Number(year) !== curYear) {
+    return NextResponse.json(
+      { error: "Penilaian hanya diperbolehkan untuk bulan yang sedang berjalan." },
+      { status: 403 }
+    );
+  }
+
   // Hitung average score dari 5 pertanyaan
   const avgScore = Math.round(
     (scores.q1 + scores.q2 + scores.q3 + scores.q4 + scores.q5) / 5

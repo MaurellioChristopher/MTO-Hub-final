@@ -15,16 +15,19 @@ export async function GET(req: Request) {
 
   const supabase = getServerClient();
 
-  // Semua ratings bulan ini
-  const { data: ratings, error } = await supabase
+  // 1. Ambil data dasar (Ratings, Work Logs, Tasks, Events)
+  const { data: ratings } = await supabase
     .from("motm_ratings")
-    .select("rater_id, target_id, score, feedback_text, created_at")
+    .select("rater_id, target_id, score, feedback_text")
     .eq("month", month)
     .eq("year", year);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const { data: workLogs } = await supabase
+    .from("motm_work_logs")
+    .select("user_id, content")
+    .eq("month", month)
+    .eq("year", year);
 
-  // Semua user aktif
   const { data: users } = await supabase
     .from("users")
     .select("id, name, nim, department, role")
@@ -32,56 +35,164 @@ export async function GET(req: Request) {
     .order("department")
     .order("name");
 
+  // Format tanggal untuk filter Postgres (YYYY-MM-DD)
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  const endDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+
+  // Ambil even pada bulan tersebut
+  const { data: events } = await supabase
+    .from("events")
+    .select("id")
+    .gte("date", startDate)
+    .lt("date", endDate);
+
+  const eventIds = events?.map(e => e.id) || [];
+
+  // Ambil attendance untuk event-event tersebut
+  const { data: attendance } = eventIds.length > 0
+    ? await supabase
+        .from("attendance")
+        .select("user_id, status")
+        .in("event_id", eventIds)
+    : { data: [] };
+
+  // Ambil tasks yang dibuat/ada pada bulan tersebut
+  const { data: tasks } = await supabase
+    .from("personal_tasks")
+    .select("user_id, is_completed")
+    .gte("created_at", startDate)
+    .lt("created_at", endDate);
+
   if (!users) return NextResponse.json([]);
 
-  const userMap = Object.fromEntries((users ?? []).map((u) => [u.id, u]));
+  const userMap = Object.fromEntries(users.map((u) => [u.id, u]));
+  const workLogSet = new Set(workLogs?.map(l => l.user_id) || []);
 
-  // Kelompokkan: per target → semua score
-  const targetMap: Record<string, {
-    user: typeof users[0];
-    scores: number[];
-    questionScores: { q1: number[]; q2: number[]; q3: number[]; q4: number[]; q5: number[] };
-    raterCount: number;
-  }> = {};
+  // Kelompokkan data per user
+  const targetMap: Record<string, any> = {};
 
-  for (const rating of ratings ?? []) {
-    const user = userMap[rating.target_id];
-    if (!user) continue;
+  users.forEach(user => {
+    targetMap[user.id] = {
+      user,
+      ratings: [],
+      attendanceCount: 0,
+      tasksTotal: 0,
+      tasksCompleted: 0,
+      hasWorkLog: workLogSet.has(user.id)
+    };
+  });
 
-    if (!targetMap[rating.target_id]) {
-      targetMap[rating.target_id] = {
-        user,
-        scores: [],
-        questionScores: { q1: [], q2: [], q3: [], q4: [], q5: [] },
-        raterCount: 0,
-      };
+  // Masukkan ratings
+  ratings?.forEach(r => {
+    if (targetMap[r.target_id]) targetMap[r.target_id].ratings.push(r.score);
+  });
+
+  // Masukkan attendance
+  attendance?.forEach(a => {
+    if (targetMap[a.user_id] && a.status === 'present') {
+      targetMap[a.user_id].attendanceCount++;
     }
+  });
 
-    targetMap[rating.target_id].scores.push(rating.score);
-    targetMap[rating.target_id].raterCount++;
-
-    try {
-      const qs = JSON.parse(rating.feedback_text ?? "{}");
-      for (const k of ["q1","q2","q3","q4","q5"] as const) {
-        if (qs[k]) targetMap[rating.target_id].questionScores[k].push(qs[k]);
-      }
-    } catch { /* skip */ }
-  }
+  // Masukkan tasks
+  tasks?.forEach(t => {
+    if (targetMap[t.user_id]) {
+      targetMap[t.user_id].tasksTotal++;
+      if (t.is_completed) targetMap[t.user_id].tasksCompleted++;
+    }
+  });
 
   const results = Object.values(targetMap).map((t) => {
-    const avg = t.scores.reduce((a, b) => a + b, 0) / (t.scores.length || 1);
-    const qAvg = (arr: number[]) => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+    // 1. Peer Rating Score (40%) - Skala 1-10 -> 0-100
+    const avgRating = t.ratings.length > 0 
+      ? (t.ratings.reduce((a: number, b: number) => a + b, 0) / t.ratings.length) * 10
+      : 0;
+    
+    // 2. Attendance Score (30%)
+    const attendanceRate = eventIds.length > 0 
+      ? (t.attendanceCount / eventIds.length) * 100 
+      : 100; // Jika tidak ada event, dianggap sempurna atau netral
+
+    // 3. Work Performance Score (30%)
+    // Log Kerja (15%) + Task Completion (15%)
+    const logScore = t.hasWorkLog ? 100 : 0;
+    const taskScore = t.tasksTotal > 0 
+      ? (t.tasksCompleted / t.tasksTotal) * 100 
+      : 100; // Jika tidak ada task, dianggap sempurna atau netral
+    
+    const performanceScore = (logScore * 0.5) + (taskScore * 0.5);
+
+    // Final Weighted Score (50% Peer Rating + 50% Performance)
+    const finalScore = (avgRating * 0.5) + (performanceScore * 0.5);
+
     return {
       ...t.user,
-      avgScore: Number(avg.toFixed(2)),
-      raterCount: t.raterCount,
-      q1Avg: Number(qAvg(t.questionScores.q1).toFixed(2)),
-      q2Avg: Number(qAvg(t.questionScores.q2).toFixed(2)),
-      q3Avg: Number(qAvg(t.questionScores.q3).toFixed(2)),
-      q4Avg: Number(qAvg(t.questionScores.q4).toFixed(2)),
-      q5Avg: Number(qAvg(t.questionScores.q5).toFixed(2)),
+      peerRating: Number(avgRating.toFixed(2)),
+      performanceScore: Number(performanceScore.toFixed(2)),
+      finalScore: Number(finalScore.toFixed(2)),
+      raterCount: t.ratings.length,
+      hasWorkLog: t.hasWorkLog,
+      tasksStats: `${t.tasksCompleted}/${t.tasksTotal}`
     };
-  }).sort((a, b) => b.avgScore - a.avgScore);
+  }).sort((a, b) => b.finalScore - a.finalScore);
 
-  return NextResponse.json({ results, totalRatings: ratings?.length ?? 0, month, year });
+  return NextResponse.json({ 
+    results, 
+    totalRatings: ratings?.length ?? 0, 
+    totalEvents: eventIds.length,
+    month, 
+    year 
+  });
+}
+
+// DELETE /api/motm/results
+// Admin only — hapus semua rating untuk target_id tertentu di bulan & tahun spesifik
+export async function DELETE(req: Request) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.user.role !== "Admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { searchParams } = new URL(req.url);
+  const targetId = searchParams.get("targetId");
+  const month    = Number(searchParams.get("month"));
+  const year     = Number(searchParams.get("year"));
+
+  if (!targetId || !month || !year) {
+    return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
+  }
+
+  const supabase = getServerClient();
+
+  // 1. Prioritas: Hapus data rating (Tabel ini pasti ada)
+  const { error: err1 } = await supabase
+    .from("motm_ratings")
+    .delete()
+    .eq("target_id", targetId)
+    .eq("month", month)
+    .eq("year", year);
+
+  if (err1) {
+    console.error("Delete Rating Error:", err1);
+    return NextResponse.json({ 
+      error: "Gagal menghapus hasil rating", 
+      detail: err1.message 
+    }, { status: 500 });
+  }
+
+  // 2. Opsional: Hapus laporan kerja (Tabel ini mungkin belum ada)
+  // Kita abaikan jika error karena tabel tidak ditemukan (PGRST204/205)
+  const { error: err2 } = await supabase
+    .from("motm_work_logs")
+    .delete()
+    .eq("user_id", targetId)
+    .eq("month", month)
+    .eq("year", year);
+
+  if (err2 && !err2.message.includes("not find")) {
+    console.error("Delete WorkLog Error:", err2);
+  }
+
+  return NextResponse.json({ message: "Hasil rating berhasil di-reset" });
 }

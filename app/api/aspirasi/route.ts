@@ -48,3 +48,28 @@ export async function POST(req: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }
+
+// DELETE /api/aspirasi/:id — hapus aspirasi (Admin only)
+export async function DELETE(req: Request) {
+  const { auth } = await import("@/lib/auth");
+  const session = await auth();
+
+  if (session?.user?.role !== "Admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json({ error: "ID Aspirasi diperlukan" }, { status: 400 });
+  }
+
+  const supabase = getServerClient();
+
+  // Hapus aspirasi (replies akan ikut terhapus otomatis karena ON DELETE CASCADE pada DB)
+  const { error } = await supabase.from("aspirasi").delete().eq("id", id);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ success: true });
+}

@@ -5,7 +5,8 @@ import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Trophy, Star, CheckCircle2, Loader2, AlertCircle,
-  BarChart3, Users, ChevronDown,
+  BarChart3, Users, ChevronDown, Lock, ClipboardList, Send,
+  Trash2,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -13,8 +14,13 @@ interface Member { id: string; name: string; nim: string; department: string; ro
 interface Scores  { q1: number; q2: number; q3: number; q4: number; q5: number }
 interface ExistingRating { target_id: string; score: number; feedback_text: string }
 interface ResultEntry extends Member {
-  avgScore: number; raterCount: number;
-  q1Avg: number; q2Avg: number; q3Avg: number; q4Avg: number; q5Avg: number;
+  peerRating: number;
+  attendanceRate: number;
+  performanceScore: number;
+  finalScore: number;
+  raterCount: number;
+  hasWorkLog: boolean;
+  tasksStats: string;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -81,18 +87,18 @@ function StarRating({ value, onChange, color, disabled }: {
 }
 
 // ── Score Bar (for admin view) ────────────────────────────────────────────────
-function ScoreBar({ value, color }: { value: number; color: string }) {
+function ScoreBar({ value, color, max = 100 }: { value: number; color: string; max?: number }) {
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
         <motion.div className="h-full rounded-full"
           initial={{ width: 0 }}
-          animate={{ width: `${(value / 5) * 100}%` }}
+          animate={{ width: `${(value / max) * 100}%` }}
           transition={{ duration: 0.6, ease: "easeOut" }}
           style={{ background: color }}
         />
       </div>
-      <span className="text-[11px] font-bold w-8 text-right" style={{ color }}>
+      <span className="text-[11px] font-bold w-10 text-right" style={{ color }}>
         {value.toFixed(1)}
       </span>
     </div>
@@ -130,6 +136,12 @@ export default function MotmPage() {
   const [loadingResults, setLoadingRes] = useState(false);
   const [expandedId, setExpandedId]   = useState<string|null>(null);
   const [filterDept, setFilterDept]   = useState<string>("ALL");
+
+  // ── Work Log state ──────────────────────────────────────────────────
+  const [myWorkLog, setMyWorkLog]     = useState("");
+  const [workLogsMap, setWorkLogsMap] = useState<Record<string, string>>({});
+  const [savingLog, setSavingLog]     = useState(false);
+  const isLocked = selMonth !== now.getMonth() || selYear !== now.getFullYear();
 
   // Fetch dept members
   useEffect(() => {
@@ -171,8 +183,42 @@ export default function MotmPage() {
     } finally { setLoadingRes(false); }
   }, [isAdmin, selMonth, selYear]);
 
-  useEffect(() => { fetchExisting(); }, [fetchExisting]);
+  // Fetch work logs
+  const fetchWorkLogs = useCallback(async () => {
+    if (!dept) return;
+    try {
+      // Fetch current user's log
+      const res1 = await fetch(`/api/motm/work-log?month=${selMonth+1}&year=${selYear}`);
+      const data1 = await res1.json();
+      setMyWorkLog(data1.content || "");
+
+      // Fetch all logs for dept (to show to rater)
+      const res2 = await fetch(`/api/motm/work-log?month=${selMonth+1}&year=${selYear}&department=${dept}`);
+      const data2: { user_id: string; content: string }[] = await res2.json();
+      const map: Record<string, string> = {};
+      data2.forEach(log => map[log.user_id] = log.content);
+      setWorkLogsMap(map);
+    } catch { /* skip */ }
+  }, [dept, selMonth, selYear]);
+
+  useEffect(() => { fetchExisting(); fetchWorkLogs(); }, [fetchExisting, fetchWorkLogs]);
   useEffect(() => { if (activeTab === "results") fetchResults(); }, [activeTab, fetchResults]);
+
+  async function handleSaveWorkLog() {
+    if (isLocked) return;
+    setSavingLog(true);
+    try {
+      const res = await fetch("/api/motm/work-log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month: selMonth+1, year: selYear, content: myWorkLog }),
+      });
+      if (!res.ok) throw new Error();
+      showToast("Laporan kerja disimpan ✓", true);
+    } catch {
+      showToast("Gagal menyimpan laporan.", false);
+    } finally { setSavingLog(false); }
+  }
 
   function setScore(targetId: string, key: keyof Scores, val: number) {
     setRatingsMap(prev => ({ ...prev, [targetId]: { ...(prev[targetId] ?? EMPTY), [key]: val } }));
@@ -253,11 +299,19 @@ export default function MotmPage() {
         </div>
 
         {/* Month picker */}
-        <div className="relative">
+          {isLocked && (
+            <div className="absolute -left-20 top-2.5 hidden lg:flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold text-muted-foreground/50 border border-white/5 bg-white/5 uppercase tracking-widest backdrop-blur-md">
+              <Lock size={10}/> Read Only
+            </div>
+          )}
           <button
             onClick={() => setShowMonths(v => !v)}
             className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all"
-            style={{ background:"rgba(212,175,55,0.10)", border:"1px solid rgba(212,175,55,0.25)", color:"#D4AF37" }}
+            style={{ 
+              background: isLocked ? "rgba(255,255,255,0.03)" : "rgba(212,175,55,0.10)", 
+              border: isLocked ? "1px solid rgba(255,255,255,0.10)" : "1px solid rgba(212,175,55,0.25)", 
+              color: isLocked ? "var(--muted-foreground)" : "#D4AF37" 
+            }}
           >
             <Trophy size={14}/>
             {MONTHS[selMonth]} {selYear}
@@ -284,7 +338,6 @@ export default function MotmPage() {
             )}
           </AnimatePresence>
         </div>
-      </div>
 
       {/* ── Tabs (Admin only sees both, user only sees Rate) ── */}
       {isAdmin && (
@@ -340,6 +393,57 @@ export default function MotmPage() {
               style={{ background:`linear-gradient(90deg,${deptColor}80,${deptColor})` }}
             />
           </div>
+
+          {/* Locked Notice */}
+          {isLocked && (
+            <motion.div initial={{ opacity:0, scale:0.98 }} animate={{ opacity:1, scale:1 }}
+              className="rounded-2xl border border-white/5 bg-white/5 px-5 py-6 text-center space-y-2 backdrop-blur-xl"
+            >
+              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-muted-foreground">
+                <Lock size={18}/>
+              </div>
+              <p className="text-sm font-bold text-foreground">Akses Rating Terkunci</p>
+              <p className="max-w-md mx-auto text-xs text-muted-foreground leading-relaxed">
+                Periode penilaian untuk {MONTHS[selMonth]} {selYear} telah berakhir. Anda tetap dapat melihat hasil leaderboard, namun tidak dapat mengubah nilai.
+              </p>
+            </motion.div>
+          )}
+
+          {/* My Work Log Section */}
+          {!isLocked && (
+            <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
+              className="rounded-2xl p-5 space-y-4"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ClipboardList size={16} className="text-[#D4AF37]" />
+                  <p className="text-sm font-bold text-foreground">Laporan Kerja Saya</p>
+                </div>
+                {savingLog && <Loader2 size={12} className="animate-spin text-muted-foreground" />}
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Tuliskan pencapaian atau tugas yang kamu selesaikan bulan ini. Ini akan mempermudah rekan setim dalam memberikan penilaian yang objektif.
+              </p>
+              <textarea
+                value={myWorkLog}
+                onChange={(e) => setMyWorkLog(e.target.value)}
+                placeholder="Contoh: Menyelesaikan desain poster Proker A, Memoderasi 2 rapat departemen..."
+                className="w-full h-24 bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white focus:border-[#D4AF37]/50 outline-none transition-all resize-none"
+              />
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSaveWorkLog}
+                  disabled={savingLog || !myWorkLog.trim()}
+                  className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-white transition-all disabled:opacity-40"
+                  style={{ background: "linear-gradient(135deg,#D4AF37,#8B6B00)", boxShadow: "0 4px 14px rgba(212,175,55,0.2)" }}
+                >
+                  {savingLog ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                  {savingLog ? "Menyimpan..." : "Simpan Laporan Kerja"}
+                </button>
+              </div>
+            </motion.div>
+          )}
 
           {/* Loading existing notice */}
           {loadingExist && (
@@ -404,6 +508,14 @@ export default function MotmPage() {
                       </div>
                     </div>
 
+                    {/* Work Report Display (for transparency) */}
+                    <div className="px-5 py-3 bg-white/[0.03] space-y-1.5">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Laporan Kerja {target.name.split(" ")[0]}</p>
+                      <div className="rounded-xl bg-black/20 p-3 italic text-xs text-white/70 leading-relaxed border border-white/5">
+                        {workLogsMap[target.id] || "Belum ada laporan kerja yang diisi anggota ini."}
+                      </div>
+                    </div>
+
                     {/* Questions */}
                     <div className="px-5 py-5 space-y-5">
                       {QUESTIONS.map(q => (
@@ -418,34 +530,36 @@ export default function MotmPage() {
                           <div className="flex flex-wrap items-center gap-2 pl-4">
                             <span className="text-[10px] text-muted-foreground/50 shrink-0">{q.scaleMin}</span>
                             <StarRating value={scores[q.key]} onChange={v => setScore(target.id, q.key, v)}
-                              color={q.color} disabled={isDone}/>
+                              color={q.color} disabled={isDone || isLocked}/>
                             <span className="text-[10px] text-muted-foreground/50 shrink-0">{q.scaleMax}</span>
                           </div>
                         </div>
                       ))}
 
                       {/* Submit row */}
-                      <div className="flex items-center justify-between pt-3"
-                        style={{ borderTop:"1px solid rgba(255,255,255,0.05)" }}>
-                        <p className="text-xs">
-                          {filled === 5
-                            ? <span className="text-[#22C55E] font-semibold">✓ Siap disimpan</span>
-                            : <span className="text-muted-foreground">{filled}/5 terisi</span>}
-                        </p>
-                        <button onClick={() => submitRating(target)}
-                          disabled={isDone || isSub || filled < 5}
-                          className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                          style={{
-                            background: isDone ? "#22C55E"
-                              : filled === 5 ? `linear-gradient(135deg,${deptColor},${deptColor}aa)`
-                              : "rgba(255,255,255,0.06)",
-                            boxShadow: filled===5&&!isDone ? `0 4px 16px ${deptColor}40` : "none",
-                          }}>
-                          {isSub ? <><Loader2 size={13} className="animate-spin"/> Menyimpan...</>
-                            : isDone ? <><CheckCircle2 size={13}/> Tersimpan</>
-                            : <><Trophy size={13}/> Simpan</>}
-                        </button>
-                      </div>
+                      {!isLocked && (
+                        <div className="flex items-center justify-between pt-3"
+                          style={{ borderTop:"1px solid rgba(255,255,255,0.05)" }}>
+                          <p className="text-xs">
+                            {filled === 5
+                              ? <span className="text-[#22C55E] font-semibold">✓ Siap disimpan</span>
+                              : <span className="text-muted-foreground">{filled}/5 terisi</span>}
+                          </p>
+                          <button onClick={() => submitRating(target)}
+                            disabled={isDone || isSub || filled < 5}
+                            className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{
+                              background: isDone ? "#22C55E"
+                                : filled === 5 ? `linear-gradient(135deg,${deptColor},${deptColor}aa)`
+                                : "rgba(255,255,255,0.06)",
+                              boxShadow: filled===5&&!isDone ? `0 4px 16px ${deptColor}40` : "none",
+                            }}>
+                            {isSub ? <><Loader2 size={13} className="animate-spin"/> Menyimpan...</>
+                              : isDone ? <><CheckCircle2 size={13}/> Tersimpan</>
+                              : <><Trophy size={13}/> Simpan</>}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 );
@@ -513,7 +627,7 @@ export default function MotmPage() {
               {filteredResults.map((r, i) => {
                 const col = DEPT_COLORS[r.department] ?? "#DC143C";
                 const isExp = expandedId === r.id;
-                const stars = Math.round(r.avgScore);
+                const stars = Math.round(r.peerRating / 20);
                 return (
                   <motion.div key={r.id}
                     initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
@@ -546,20 +660,46 @@ export default function MotmPage() {
                       </div>
                       {/* Score */}
                       <div className="shrink-0 flex flex-col items-end gap-1">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 group relative">
                           {[1,2,3,4,5].map(s=>(
-                            <Star key={s} size={14} style={{
-                              color: s<=stars ? "#D4AF37":"rgba(255,255,255,0.10)",
-                              fill:  s<=stars ? "#D4AF37":"transparent",
+                            <Star key={s} size={12} style={{
+                              color: s <= Math.round(r.peerRating/20) ? "#D4AF37":"rgba(255,255,255,0.10)",
+                              fill:  s <= Math.round(r.peerRating/20) ? "#D4AF37":"transparent",
                             }}/>
                           ))}
                         </div>
                         <span className="text-xl font-black" style={{ color:col }}>
-                          {r.avgScore.toFixed(2)}
+                          {r.finalScore.toFixed(2)}
                         </span>
                       </div>
                       <ChevronDown size={15} className={`shrink-0 text-muted-foreground transition-transform ${isExp?"rotate-180":""}`}/>
                     </button>
+
+                    {/* Admin Delete Action */}
+                    {isAdmin && (
+                      <div className="flex justify-end px-5 pb-3">
+                        <button
+                          onClick={async () => {
+                            if (!window.confirm(`Hapus semua hasil rating untuk ${r.name}? Ini akan memungkinkan orang lain untuk memberikan rating ulang kepada beliau.`)) return;
+                            try {
+                              const res = await fetch(`/api/motm/results?targetId=${r.id}&month=${selMonth+1}&year=${selYear}`, { method: "DELETE" });
+                              const data = await res.json();
+                              if (res.ok) {
+                                showToast(`Hasil rating ${r.name} berhasil dihapus.`, true);
+                                fetchResults(); // Refresh list
+                              } else {
+                                showToast(`Gagal: ${data.detail || "Terjadi kesalahan"}`, false);
+                              }
+                            } catch (e) {
+                              showToast("Terjadi kesalahan sistem.", false);
+                            }
+                          }}
+                          className="flex items-center gap-1.5 text-[10px] font-bold text-red-500/60 hover:text-red-500 transition-colors uppercase tracking-widest"
+                        >
+                          <Trash2 size={12}/> Hapus Hasil Rating
+                        </button>
+                      </div>
+                    )}
 
                     {/* Expanded detail */}
                     <AnimatePresence>
@@ -571,23 +711,38 @@ export default function MotmPage() {
                           transition={{ duration:0.25 }}
                           className="overflow-hidden"
                         >
-                          <div className="px-5 pb-5 space-y-3"
+                          <div className="px-5 pb-5 space-y-4"
                             style={{ borderTop:"1px solid rgba(255,255,255,0.05)" }}>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 pt-3">
-                              Breakdown per Metrik
-                            </p>
-                            {QUESTIONS.map((q,qi)=>{
-                              const vals = [r.q1Avg,r.q2Avg,r.q3Avg,r.q4Avg,r.q5Avg];
-                              return (
-                                <div key={q.key} className="grid grid-cols-[1fr_160px] items-center gap-3">
-                                  <div>
-                                    <p className="text-xs font-semibold text-foreground">{Q_LABELS[qi]}</p>
-                                    <p className="text-[10px] text-muted-foreground">{q.title}</p>
-                                  </div>
-                                  <ScoreBar value={vals[qi]} color={q.color}/>
+                            <div className="flex items-center justify-between pt-3">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
+                                Breakdown Penilaian (Weighted)
+                              </p>
+                              <div className="flex items-center gap-2">
+                                {r.hasWorkLog ? (
+                                  <span className="text-[9px] bg-green-500/10 text-green-400 border border-green-500/20 px-1.5 py-0.5 rounded-full font-bold">LOG ✓</span>
+                                ) : (
+                                  <span className="text-[9px] bg-red-500/10 text-red-400 border border-red-500/20 px-1.5 py-0.5 rounded-full font-bold">NO LOG</span>
+                                )}
+                                <span className="text-[9px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded-full font-bold">TASKS {r.tasksStats}</span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-[1fr_160px] items-center gap-3">
+                                <div>
+                                  <p className="text-xs font-semibold text-foreground">Peer Rating (50%)</p>
+                                  <p className="text-[10px] text-muted-foreground">Rata-rata penilaian rekan departemen</p>
                                 </div>
-                              );
-                            })}
+                                <ScoreBar value={r.peerRating} color="#D4AF37"/>
+                              </div>
+                              <div className="grid grid-cols-[1fr_160px] items-center gap-3">
+                                <div>
+                                  <p className="text-xs font-semibold text-foreground">Kinerja & Tugas (50%)</p>
+                                  <p className="text-[10px] text-muted-foreground">Log kerja + penyelesaian Task MTO</p>
+                                </div>
+                                <ScoreBar value={r.performanceScore} color="#4F8EF7"/>
+                              </div>
+                            </div>
                           </div>
                         </motion.div>
                       )}
