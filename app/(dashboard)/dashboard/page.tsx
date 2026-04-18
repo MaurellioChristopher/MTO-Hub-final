@@ -144,6 +144,8 @@ export default function DashboardPage() {
   const [toast, setToast]                 = useState<{ msg: string; ok: boolean } | null>(null);
   const [expandedId, setExpandedId]       = useState<string | null>(null);
   const [monthModalOpen, setMonthModalOpen] = useState(false);
+  const [viewMonth, setViewMonth]           = useState(new Date().getMonth() + 1);
+  const [viewMode, setViewMode]             = useState<"month" | "year">("month");
 
   const firstName = session?.user?.name?.split(" ")[0] ?? "...";
   const isAdmin   = session?.user?.role === "Admin";
@@ -228,9 +230,12 @@ export default function DashboardPage() {
   const currentDay = nowObj.getDate();
 
   const todayBirthdays = BIRTHDAY_DATA.filter(b => b.month === currentMonth && b.day === currentDay);
-  const allMonthBirthdays = BIRTHDAY_DATA
-    .filter(b => b.month === currentMonth)
+  
+  const monthBirthdays = BIRTHDAY_DATA
+    .filter(b => b.month === viewMonth)
     .sort((a, b) => a.day - b.day);
+
+  const monthLabel = new Date(2000, viewMonth - 1).toLocaleDateString("id-ID", { month: "long" });
   
   // Calculate upcoming birthdays (next 5)
   const upcomingBirthdays = BIRTHDAY_DATA
@@ -345,50 +350,132 @@ export default function DashboardPage() {
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-3xl p-6 shadow-2xl"
+              className={`fixed left-1/2 top-1/2 z-50 w-full ${viewMode === 'year' ? 'max-w-2xl' : 'max-w-sm'} -translate-x-1/2 -translate-y-1/2 rounded-3xl p-6 shadow-2xl transition-all duration-300`}
               style={{ background: "#0D0D14", border: "1px solid rgba(236,72,153,0.2)" }}
             >
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-xl font-black flex items-center gap-2 text-white">
-                    <Cake className="text-[#EC4899]" size={22} /> Ultah {nowObj.toLocaleDateString("id-ID", { month: "long" })}
+                    <Cake className="text-[#EC4899]" size={22} /> Kalender Ultah
                   </h2>
-                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-0.5">Seluruh Anggota MTO</p>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-0.5">Seluruh Anggota MTO 25/26</p>
                 </div>
-                <button onClick={() => setMonthModalOpen(false)} className="rounded-full p-2 hover:bg-white/10 text-muted-foreground transition-colors">
-                  <X size={20} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                    <button 
+                      onClick={() => setViewMode("month")}
+                      className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${viewMode === 'month' ? 'bg-[#EC4899] text-white shadow-lg' : 'text-muted-foreground hover:text-white'}`}
+                    >
+                      Bulan
+                    </button>
+                    <button 
+                      onClick={() => setViewMode("year")}
+                      className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${viewMode === 'year' ? 'bg-[#EC4899] text-white shadow-lg' : 'text-muted-foreground hover:text-white'}`}
+                    >
+                      Tahun
+                    </button>
+                  </div>
+                  <button onClick={() => setMonthModalOpen(false)} className="rounded-full p-2 hover:bg-white/10 text-muted-foreground transition-colors">
+                    <X size={20} />
+                  </button>
+                </div>
               </div>
 
-              <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-                {allMonthBirthdays.map((b) => {
-                  const isToday = b.day === currentDay;
-                  return (
-                    <div 
-                      key={b.name}
-                      className="group flex items-center justify-between gap-3 rounded-2xl px-4 py-3.5 transition-all"
-                      style={{ 
-                        background: isToday ? "linear-gradient(135deg, rgba(236,72,153,0.15) 0%, rgba(168,85,247,0.15) 100%)" : "rgba(255,255,255,0.03)",
-                        border: isToday ? "1px solid rgba(236,72,153,0.3)" : "1px solid rgba(255,255,255,0.06)"
-                      }}
+              {viewMode === "month" ? (
+                <>
+                  {/* Month Selector */}
+                  <div className="flex items-center justify-between gap-2 bg-white/5 rounded-2xl p-1 mb-6 border border-white/5">
+                    <button 
+                      onClick={() => setViewMonth(prev => prev === 1 ? 12 : prev - 1)}
+                      className="p-2 hover:bg-white/10 rounded-xl transition-colors text-muted-foreground"
                     >
-                      <div className="flex items-center gap-3">
-                        <div 
-                          className="flex h-10 w-10 flex-col items-center justify-center rounded-xl font-black"
-                          style={{ background: isToday ? "#EC4899" : "rgba(255,255,255,0.05)", color: isToday ? "#fff" : "rgba(255,255,255,0.4)" }}
-                        >
-                          <span className="text-[14px] leading-none">{b.day}</span>
+                      <ChevronRight className="rotate-180" size={18} />
+                    </button>
+                    <span className="text-sm font-black text-[#EC4899] uppercase tracking-widest">{monthLabel}</span>
+                    <button 
+                      onClick={() => setViewMonth(prev => prev === 12 ? 1 : prev + 1)}
+                      className="p-2 hover:bg-white/10 rounded-xl transition-colors text-muted-foreground"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-2.5 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar min-h-[200px]">
+                    {monthBirthdays.length > 0 ? (
+                      monthBirthdays.map((b) => {
+                        const isToday = b.month === currentMonth && b.day === currentDay;
+                        return (
+                          <div 
+                            key={b.name}
+                            className="group flex items-center justify-between gap-3 rounded-2xl px-4 py-3.5 transition-all"
+                            style={{ 
+                              background: isToday ? "linear-gradient(135deg, rgba(236,72,153,0.15) 0%, rgba(168,85,247,0.15) 100%)" : "rgba(255,255,255,0.03)",
+                              border: isToday ? "1px solid rgba(236,72,153,0.3)" : "1px solid rgba(255,255,255,0.06)"
+                            }}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div 
+                                className="flex h-10 w-10 flex-col items-center justify-center rounded-xl font-black"
+                                style={{ background: isToday ? "#EC4899" : "rgba(255,255,255,0.05)", color: isToday ? "#fff" : "rgba(255,255,255,0.4)" }}
+                              >
+                                <span className="text-[14px] leading-none">{b.day}</span>
+                              </div>
+                              <div>
+                                <p className={`text-sm font-bold ${isToday ? 'text-white' : 'text-foreground'}`}>{b.name}</p>
+                                {isToday && <p className="text-[10px] text-[#EC4899] font-black uppercase">ULTAH HARI INI!</p>}
+                              </div>
+                            </div>
+                            {isToday && <PartyPopper size={16} className="text-[#EC4899] animate-bounce" />}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-12 opacity-30">
+                        <Gift size={40} className="mb-2" />
+                        <p className="text-xs font-bold text-center">Tidak ada yang ulang tahun<br/>di bulan ini.</p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[65vh] overflow-y-auto pr-2 custom-scrollbar p-1">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((mIndex) => {
+                    const mb = BIRTHDAY_DATA.filter(b => b.month === mIndex).sort((a, b) => a.day - b.day);
+                    const mName = new Date(2000, mIndex-1).toLocaleDateString("id-ID", { month: "long" });
+                    const isCurrMonth = mIndex === currentMonth;
+
+                    return (
+                      <div 
+                        key={mIndex} 
+                        className="rounded-2xl p-4 transition-all"
+                        style={{ 
+                          background: isCurrMonth ? "rgba(236,72,153,0.05)" : "rgba(255,255,255,0.02)",
+                          border: isCurrMonth ? "1px solid rgba(236,72,153,0.2)" : "1px solid rgba(255,255,255,0.05)"
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className={`text-xs font-black uppercase tracking-widest ${isCurrMonth ? 'text-[#EC4899]' : 'text-muted-foreground'}`}>
+                            {mName}
+                          </h3>
+                          {isCurrMonth && <span className="text-[8px] font-black bg-[#EC4899] text-white px-1.5 py-0.5 rounded-full uppercase">Bulan Ini</span>}
                         </div>
-                        <div>
-                          <p className={`text-sm font-bold ${isToday ? 'text-white' : 'text-foreground'}`}>{b.name}</p>
-                          {isToday && <p className="text-[10px] text-[#EC4899] font-black uppercase">SEDANG BERULANG TAHUN!</p>}
+                        <div className="space-y-2">
+                          {mb.length > 0 ? (
+                            mb.map(b => (
+                              <div key={b.name} className="flex items-center gap-2 group">
+                                <span className="text-[10px] font-black text-white/40 w-4 group-hover:text-[#EC4899] transition-colors">{b.day}</span>
+                                <span className="text-[11px] font-medium text-foreground/80 truncate group-hover:text-white transition-colors">{b.name}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground/30 italic">Kosong</p>
+                          )}
                         </div>
                       </div>
-                      {isToday && <PartyPopper size={16} className="text-[#EC4899] animate-bounce" />}
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
 
               <button
                 onClick={() => setMonthModalOpen(false)}
@@ -719,7 +806,10 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <SectionLabel>Reminder Ulang Tahun</SectionLabel>
               <button 
-                onClick={() => setMonthModalOpen(true)}
+                onClick={() => {
+      setViewMonth(new Date().getMonth() + 1);
+      setMonthModalOpen(true);
+    }}
                 className="flex items-center gap-1.5 text-[10px] font-bold text-[#A855F7] hover:text-[#EC4899] transition-colors bg-[#A855F7]/10 px-2.5 py-1 rounded-full uppercase tracking-wider"
               >
                 <Calendar size={12} /> Lihat Seluruh Bulan
