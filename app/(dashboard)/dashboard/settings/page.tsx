@@ -59,6 +59,12 @@ export default function SettingsPage() {
   const [social, setSocial]     = useState({ instagram: "", linkedin: "", github: "", website: "" });
   const [savingSocial, setSavingSocial] = useState(false);
 
+  // Password
+  const [passCurrent, setPassCurrent] = useState("");
+  const [passNew, setPassNew]         = useState("");
+  const [passConfirm, setPassConfirm] = useState("");
+  const [savingPass, setSavingPass]   = useState(false);
+
   function showToast(msg: string, ok: boolean) {
     setToast({ msg, ok });
     setTimeout(() => setToast(null), 3500);
@@ -146,6 +152,42 @@ export default function SettingsPage() {
       showToast(err.message, false);
     } finally {
       setSavingSocial(false);
+    }
+  };
+
+  // ── Password change ────────────────────────────────────────────────────────
+  const handleSavePassword = async () => {
+    if (!passCurrent || !passNew || !passConfirm) {
+      showToast("Semua field password harus diisi", false);
+      return;
+    }
+    if (passNew !== passConfirm) {
+      showToast("Konfirmasi password tidak cocok", false);
+      return;
+    }
+    if (passNew.length < 6) {
+      showToast("Password baru minimal 6 karakter", false);
+      return;
+    }
+
+    setSavingPass(true);
+    try {
+      const res = await fetch("/api/user/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword: passCurrent, newPassword: passNew }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      
+      setPassCurrent("");
+      setPassNew("");
+      setPassConfirm("");
+      showToast("✅ Password berhasil diperbarui!", true);
+    } catch (err: any) {
+      showToast(err.message, false);
+    } finally {
+      setSavingPass(false);
     }
   };
 
@@ -370,9 +412,60 @@ export default function SettingsPage() {
         </button>
       </motion.div>
 
-      {/* ── Email info ── */}
+      {/* ── Security ── */}
       <motion.div
         initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+        className="rounded-2xl p-5 space-y-4"
+        style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}
+      >
+        <div className="flex items-center gap-2">
+          <Shield size={15} className="text-[#DC143C]" />
+          <p className="text-sm font-bold text-foreground">Keamanan Akun</p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3">
+          <div>
+            <p className="text-[10px] font-bold text-muted-foreground/50 mb-1 uppercase tracking-wide">Password Saat Ini</p>
+            <input
+              type="password" value={passCurrent} onChange={(e) => setPassCurrent(e.target.value)}
+              placeholder="••••••••"
+              className="w-full rounded-xl px-4 py-2 text-sm text-white outline-none border border-white/10 bg-white/5 focus:border-[#DC143C]/40 transition-all"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground/50 mb-1 uppercase tracking-wide">Password Baru</p>
+              <input
+                type="password" value={passNew} onChange={(e) => setPassNew(e.target.value)}
+                placeholder="min. 6 karakter"
+                className="w-full rounded-xl px-4 py-2 text-sm text-white outline-none border border-white/10 bg-white/5 focus:border-[#DC143C]/40 transition-all"
+              />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground/50 mb-1 uppercase tracking-wide">Konfirmasi Password Baru</p>
+              <input
+                type="password" value={passConfirm} onChange={(e) => setPassConfirm(e.target.value)}
+                placeholder="ulangi password baru"
+                className="w-full rounded-xl px-4 py-2 text-sm text-white outline-none border border-white/10 bg-white/5 focus:border-[#DC143C]/40 transition-all"
+              />
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={handleSavePassword}
+          disabled={savingPass}
+          className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-white transition-all hover:scale-[1.02] disabled:opacity-50"
+          style={{ background: "linear-gradient(135deg,#DC143C,#8B0000)", boxShadow: "0 4px 14px rgba(220,20,60,0.25)" }}
+        >
+          {savingPass ? <Loader2 size={13} className="animate-spin" /> : <Shield size={13} />}
+          {savingPass ? "Memperbarui..." : "Update Password"}
+        </button>
+      </motion.div>
+
+      {/* ── Email info ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
         className="rounded-2xl p-5"
         style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.05)" }}
       >
@@ -381,7 +474,7 @@ export default function SettingsPage() {
           <p className="text-xs font-bold text-muted-foreground/50 uppercase tracking-widest">Email Terdaftar</p>
         </div>
         <p className="text-sm text-muted-foreground">{profile?.email ?? "—"}</p>
-        <p className="text-[10px] text-muted-foreground/30 mt-1">Untuk mengganti email atau password, hubungi Admin MTO.</p>
+        <p className="text-[10px] text-muted-foreground/30 mt-1">Jaga kerahasiaan password kamu untuk keamanan akun.</p>
       </motion.div>
 
     </div>
