@@ -22,14 +22,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
 
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id as string;
         token.nim = (user as { nim: string }).nim;
         token.role = (user as { role: UserRole }).role;
         token.department = (user as { department: Department }).department;
         token.bio = (user as { bio: string }).bio;
+        token.image = (user as { avatar_url?: string }).avatar_url;
       }
+
+      if (trigger === "update" && session) {
+        if (session.image) token.image = session.image;
+        if (session.bio) token.bio = session.bio;
+        if (session.name) token.name = session.name;
+      }
+      
       return token;
     },
 
@@ -40,6 +48,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.role = token.role as UserRole;
         session.user.department = token.department as Department;
         session.user.bio = token.bio as string;
+        session.user.image = token.image as string;
       }
       return session;
     },
@@ -74,7 +83,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
           const { data, error } = await supabase
             .from("users")
-            .select("id, name, nim, username, email, role, department, password_hash, is_active, bio")
+            .select("id, name, nim, username, email, role, department, password_hash, is_active, bio, avatar_url")
             .eq("username", username)
             .single();
 
@@ -91,6 +100,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             role: data.role as UserRole,
             department: data.department as Department,
             bio: data.bio,
+            avatar_url: data.avatar_url,
           };
         } catch (err) {
           console.error("Auth error:", err);

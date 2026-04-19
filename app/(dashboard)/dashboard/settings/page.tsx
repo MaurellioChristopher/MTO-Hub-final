@@ -108,6 +108,7 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error(json.error);
       setProfile((prev) => prev ? { ...prev, avatar_url: json.avatar_url } : prev);
       setAvatarFile(null);
+      await update({ image: json.avatar_url });
       showToast("✅ Foto profil diperbarui!", true);
     } catch (err: any) {
       showToast(err.message, false);

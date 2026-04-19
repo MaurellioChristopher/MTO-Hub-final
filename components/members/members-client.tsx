@@ -26,7 +26,7 @@ const JABATAN: Record<string, string> = {
   "102012340370": "Wakil Ketua Umum",
   "102012330384": "Sekretaris",
   "102022430027": "Bendahara",
-  "102022430030": "Kepala Departemen MI",
+  "102012430030": "Kepala Departemen MI",
   "102022400160": "Kepala Departemen MP",
   "102012340269": "Kepala Departemen SD",
   "102022400208": "Kepala Departemen SI",
@@ -35,6 +35,17 @@ const JABATAN: Record<string, string> = {
 function getJabatan(m: Member) {
   return JABATAN[m.nim] ?? `Staf ${m.department}`;
 }
+
+const POSITION_PRIORITY: Record<string, number> = {
+  "Ketua Umum": 1,
+  "Wakil Ketua Umum": 2,
+  "Sekretaris": 3,
+  "Bendahara": 4,
+  "Kepala Departemen MI": 5,
+  "Kepala Departemen MP": 5,
+  "Kepala Departemen SD": 5,
+  "Kepala Departemen SI": 5,
+};
 
 // ── Avatar ───────────────────────────────────────────────────────────────────
 function AvatarCircle({
@@ -202,12 +213,28 @@ export function MembersClient({ members }: MembersClientProps) {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
   const filtered = useMemo(() => {
-    return members.filter((m) => {
-      const matchDept   = activeDept === "ALL" || m.department === activeDept;
-      const q           = search.toLowerCase();
-      const matchSearch = !q || m.name.toLowerCase().includes(q) || m.nim.includes(q) || m.department.toLowerCase().includes(q);
-      return matchDept && matchSearch;
-    });
+    return members
+      .filter((m) => {
+        const matchDept = activeDept === "ALL" || m.department === activeDept;
+        const q = search.toLowerCase();
+        const matchSearch =
+          !q ||
+          m.name.toLowerCase().includes(q) ||
+          m.nim.includes(q) ||
+          m.department.toLowerCase().includes(q);
+        return matchDept && matchSearch;
+      })
+      .sort((a, b) => {
+        const priorityA = POSITION_PRIORITY[getJabatan(a)] ?? 10;
+        const priorityB = POSITION_PRIORITY[getJabatan(b)] ?? 10;
+
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+
+        // Jika prioritas sama (sama-sama staf), urutkan berdasarkan nama
+        return a.name.localeCompare(b.name);
+      });
   }, [members, activeDept, search]);
 
   const counts = useMemo(() => {

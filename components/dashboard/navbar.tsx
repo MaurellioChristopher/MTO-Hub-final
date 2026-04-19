@@ -353,12 +353,20 @@ export function Navbar() {
                 </div>
 
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback
-                    className="text-xs font-bold text-white shadow-inner"
-                    style={{ background: `linear-gradient(135deg, ${deptColor}, ${deptColor}99)` }}
-                  >
-                    {session?.user?.name ? getInitials(session.user.name) : "?"}
-                  </AvatarFallback>
+                  {session?.user?.image ? (
+                    <img
+                      src={session.user.image}
+                      alt={session.user.name || "User"}
+                      className="h-full w-full object-cover rounded-full"
+                    />
+                  ) : (
+                    <AvatarFallback
+                      className="text-xs font-bold text-white shadow-inner"
+                      style={{ background: `linear-gradient(135deg, ${deptColor}, ${deptColor}99)` }}
+                    >
+                      {session?.user?.name ? getInitials(session.user.name) : "?"}
+                    </AvatarFallback>
+                  )}
                 </Avatar>
               </button>
             }
@@ -367,12 +375,20 @@ export function Navbar() {
             {/* Header / Info */}
             <div className="flex items-center gap-4 p-2 mb-4">
               <Avatar className="h-12 w-12 border-2 border-white/5">
-                <AvatarFallback
-                  className="text-sm font-black text-white"
-                  style={{ background: `linear-gradient(135deg, ${deptColor}, ${deptColor}99)` }}
-                >
-                  {session?.user?.name ? getInitials(session.user.name) : "?"}
-                </AvatarFallback>
+                {session?.user?.image ? (
+                  <img
+                    src={session.user.image}
+                    alt={session.user.name || "User"}
+                    className="h-full w-full object-cover rounded-full"
+                  />
+                ) : (
+                  <AvatarFallback
+                    className="text-sm font-black text-white"
+                    style={{ background: `linear-gradient(135deg, ${deptColor}, ${deptColor}99)` }}
+                  >
+                    {session?.user?.name ? getInitials(session.user.name) : "?"}
+                  </AvatarFallback>
+                )}
               </Avatar>
               <div className="min-w-0">
                 <p className="font-bold text-foreground text-base truncate">{session?.user?.name}</p>

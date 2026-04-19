@@ -91,6 +91,7 @@ declare module "next-auth" {
       role: UserRole;
       department: Department;
       bio?: string | null;
+      image?: string | null;
     };
   }
 
@@ -102,5 +103,6 @@ declare module "next-auth" {
     role: UserRole;
     department: Department;
     bio?: string | null;
+    image?: string | null;
   }
 }
