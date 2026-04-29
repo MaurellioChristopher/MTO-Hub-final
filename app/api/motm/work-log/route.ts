@@ -68,27 +68,36 @@ export async function GET(req: Request) {
   // If department is provided, we fetch logs for all users in that department
   // This is used for the rating UI
   if (department) {
-    const { data, error } = await supabase
-      .from("motm_work_logs")
-      .select("user_id, content")
-      .eq("month", Number(month))
-      .eq("year", Number(year))
-      .in(
-        "user_id",
-        (
-          await supabase
-            .from("users")
-            .select("id")
-            .eq("department", department)
-            .eq("is_active", true)
-        ).data?.map((u) => u.id) || []
-      );
+    let usersQuery = supabase
+      .from("users")
+      .select("id")
+      .eq("is_active", true);
 
-    if (error) {
-      if (error.message.includes("not find")) return NextResponse.json([]);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (department === "INTI") {
+      usersQuery = usersQuery.or("department.eq.INTI,role.eq.Admin");
+    } else {
+      usersQuery = usersQuery.eq("department", department);
     }
-    return NextResponse.json(data ?? []);
+
+    const { data: usersData } = await usersQuery;
+    const userIds = usersData?.map((u) => u.id) || [];
+
+    if (userIds.length > 0) {
+      const { data, error } = await supabase
+        .from("motm_work_logs")
+        .select("user_id, content")
+        .eq("month", Number(month))
+        .eq("year", Number(year))
+        .in("user_id", userIds);
+
+      if (error) {
+        if (error.message.includes("not find")) return NextResponse.json([]);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json(data ?? []);
+    } else {
+      return NextResponse.json([]);
+    }
   }
 
   // Otherwise, fetch just for the current user (to populate their own report input)

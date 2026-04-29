@@ -16,7 +16,11 @@ export async function GET(req: Request) {
     .order("name");
 
   if (department) {
-    query = query.eq("department", department);
+    if (department === "INTI") {
+      query = query.or("department.eq.INTI,role.eq.Admin");
+    } else {
+      query = query.eq("department", department);
+    }
   }
 
   const { data, error } = await query;
