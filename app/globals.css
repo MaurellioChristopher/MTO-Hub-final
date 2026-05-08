@@ -193,6 +193,25 @@
    UTILITY CLASSES
    ─────────────────────────────────────────────────────────────── */
 @layer utilities {
+  /* Form Input MTO */
+  .input-mto {
+    width: 100%;
+    border-radius: 0.625rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.09);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: #F0F0F5;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .input-mto::placeholder { color: #5A5A7A; }
+  .input-mto option { background: #16161F; color: #F0F0F5; }
+  .input-mto:focus {
+    border-color: rgba(220,20,60,0.5);
+    box-shadow: 0 0 0 3px rgba(220,20,60,0.1);
+  }
+
   /* Glassmorphism */
   .glass {
     background: rgba(255, 255, 255, 0.04);

@@ -19,6 +19,7 @@ import {
   Camera,
   FolderArchive,
   ListTodo,
+  FileBadge,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -77,6 +78,11 @@ const navItems: NavItem[] = [
     label: "Arsip Berkas",
     href: "/dashboard/arsip",
     icon: FolderArchive,
+  },
+  {
+    label: "Perizinan",
+    href: "/dashboard/perizinan",
+    icon: FileBadge,
   },
   {
     label: "To-Do List",

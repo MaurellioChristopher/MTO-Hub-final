@@ -243,16 +243,16 @@ ${blockContentWithModifications}
             </div>`;
 
 // Since there can be minor whitespace issues, we can just find the start and end of the block
-const startMatch = \`            <div className="space-y-4">\n              {targets.map((target, idx) => {\`;
-const startIdx = content.indexOf(\`            <div className="space-y-4">\\r\\n              {targets.map((target, idx) => {\`);
-const startIdx2 = content.indexOf(\`            <div className="space-y-4">\\n              {targets.map((target, idx) => {\`);
+const startMatch = '            <div className="space-y-4">\n              {targets.map((target, idx) => {';
+const startIdx = content.indexOf('            <div className="space-y-4">\r\n              {targets.map((target, idx) => {');
+const startIdx2 = content.indexOf('            <div className="space-y-4">\n              {targets.map((target, idx) => {');
 
 let actualStartIdx = startIdx !== -1 ? startIdx : startIdx2;
 
 if (actualStartIdx !== -1) {
   // Find the end:
-  const endMatchStr = \`              })}\\r\\n            </div>\`;
-  const endMatchStr2 = \`              })}\\n            </div>\`;
+  const endMatchStr = '              })}\r\n            </div>';
+  const endMatchStr2 = '              })}\n            </div>';
   
   let actualEndIdx = content.indexOf(endMatchStr, actualStartIdx);
   let len = endMatchStr.length;
