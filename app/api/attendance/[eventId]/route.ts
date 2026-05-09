@@ -87,3 +87,67 @@ export async function POST(
 
   return NextResponse.json(data);
 }
+
+// PUT /api/attendance/[eventId] — bulk mark semua anggota (Admin only)
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ eventId: string }> }
+) {
+  const session = await auth();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.user.role !== "Admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { eventId } = await params;
+  const body = await req.json() as { status: string; onlyUnmarked?: boolean };
+  const supabase = getServerClient();
+
+  const validStatuses = ["present", "absent", "excused"];
+  if (!validStatuses.includes(body.status)) {
+    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  }
+
+  // Ambil semua user aktif
+  const { data: users, error: usersErr } = await supabase
+    .from("users")
+    .select("id")
+    .eq("is_active", true);
+
+  if (usersErr || !users) {
+    return NextResponse.json({ error: "Gagal ambil data user" }, { status: 500 });
+  }
+
+  let targetUserIds = users.map((u) => u.id);
+
+  // Kalau onlyUnmarked: hanya user yang belum punya record absensi
+  if (body.onlyUnmarked) {
+    const { data: existing } = await supabase
+      .from("attendance")
+      .select("user_id")
+      .eq("event_id", eventId);
+    const markedIds = new Set((existing ?? []).map((a) => a.user_id));
+    targetUserIds = targetUserIds.filter((id) => !markedIds.has(id));
+  }
+
+  if (targetUserIds.length === 0) {
+    return NextResponse.json({ updated: 0 });
+  }
+
+  const now = new Date().toISOString();
+  const rows = targetUserIds.map((userId) => ({
+    event_id:  eventId,
+    user_id:   userId,
+    status:    body.status,
+    timestamp: now,
+  }));
+
+  const { error } = await supabase
+    .from("attendance")
+    .upsert(rows, { onConflict: "event_id,user_id" });
+
+  if (error) {
+    console.error("Bulk attendance error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ updated: targetUserIds.length });
+}

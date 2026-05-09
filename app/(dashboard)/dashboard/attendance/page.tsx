@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import {
   CalendarCheck, CheckCircle2, XCircle, Clock,
   ChevronRight, Loader2, MapPin, Calendar,
-  AlertCircle, ArrowLeft, RefreshCw, CalendarDays,
+  AlertCircle, ArrowLeft, RefreshCw, CalendarDays, Users, UserCheck,
 } from "lucide-react";
 import { PROKER_DATA, CATEGORY_CONFIG } from "@/lib/proker-data";
 
@@ -151,6 +151,7 @@ export default function AttendancePage() {
   const [updating, setUpdating]         = useState<string | null>(null);
   const [toast, setToast]               = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthValue());
+  const [bulkLoading, setBulkLoading]   = useState(false);
 
   const isAdmin = session?.user?.role === "Admin";
   const myId    = session?.user?.id;
@@ -233,6 +234,41 @@ export default function AttendancePage() {
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
+  }
+
+  // Bulk mark all
+  async function markAll(status: StatusKey, onlyUnmarked = false) {
+    if (!selectedEvent || !isAdmin) return;
+    setBulkLoading(true);
+    try {
+      const res = await fetch(`/api/attendance/${selectedEvent.id}`, {
+        method:  "PUT",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ status, onlyUnmarked }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+
+      // Refresh members & events
+      await fetchMembers(selectedEvent.id);
+      const { from, to } = getMonthRange(selectedMonth);
+      const updatedEvents = await fetch(`/api/attendance/events?from=${from}&to=${to}`).then((r) => r.json());
+      setEvents(updatedEvents ?? []);
+      setSelectedEvent((prev) =>
+        prev ? (updatedEvents ?? []).find((e: AttendanceEvent) => e.id === prev.id) ?? prev : null
+      );
+
+      const label = STATUS_CONFIG[status].label;
+      showToast(
+        onlyUnmarked
+          ? `${data.updated} anggota belum absen ditandai ${label} ✓`
+          : `Semua ${data.updated} anggota ditandai ${label} ✓`
+      );
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : "Gagal bulk update");
+    } finally {
+      setBulkLoading(false);
+    }
   }
 
   // Kelompokkan event berdasarkan upcoming/past relatif ke hari ini
@@ -340,6 +376,66 @@ export default function AttendancePage() {
               <div className="h-full transition-all duration-500" style={{ width: `${(present / 33) * 100}%`, background: "#22C55E" }} />
               <div className="h-full transition-all duration-500" style={{ width: `${(excused / 33) * 100}%`, background: "#D4AF37" }} />
               <div className="h-full transition-all duration-500" style={{ width: `${(absent  / 33) * 100}%`, background: "#DC143C" }} />
+            </div>
+          )}
+
+          {/* Bulk action — Admin only */}
+          {isAdmin && members.length > 0 && (
+            <div
+              className="rounded-2xl p-4"
+              style={{ background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.18)" }}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <Users size={14} style={{ color: "#22C55E" }} />
+                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#22C55E" }}>
+                  Tandai Semua
+                </p>
+                {unmarked > 0 && (
+                  <span
+                    className="ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold"
+                    style={{ background: "rgba(107,114,128,0.15)", color: "#6B7280", border: "1px solid rgba(107,114,128,0.25)" }}
+                  >
+                    {unmarked} belum absen
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {/* Hadir Semua (semua anggota, override) */}
+                <button
+                  id="bulk-all-present"
+                  disabled={bulkLoading}
+                  onClick={() => markAll("present", false)}
+                  className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-95"
+                  style={{
+                    background: "linear-gradient(135deg,#22C55E,#16A34A)",
+                    color: "#fff",
+                    boxShadow: "0 4px 14px rgba(34,197,94,0.35)",
+                    border: "1px solid rgba(34,197,94,0.5)",
+                  }}
+                >
+                  {bulkLoading ? <Loader2 size={13} className="animate-spin" /> : <UserCheck size={13} />}
+                  Hadir Semua
+                </button>
+
+                {/* Hadir yang belum absen */}
+                {unmarked > 0 && (
+                  <button
+                    id="bulk-unmarked-present"
+                    disabled={bulkLoading}
+                    onClick={() => markAll("present", true)}
+                    className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-95"
+                    style={{
+                      background: "rgba(34,197,94,0.10)",
+                      color: "#22C55E",
+                      border: "1px solid rgba(34,197,94,0.30)",
+                    }}
+                  >
+                    {bulkLoading ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                    Hadir yang Belum ({unmarked})
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
