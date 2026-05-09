@@ -65,13 +65,13 @@ export const PROKER_DATA: ProkerItem[] = [
   { date: "2026-04-11", title: "Training Internal 2",    category: "Training Internal" },
   { date: "2026-04-16", title: "MTODAY",                 category: "MTODAY" },
   { date: "2026-04-18", title: "Konten Materi 4",        category: "Konten Materi" },
-  { date: "2026-04-18", title: "Visit Community",        category: "VISIT COMMUNITY" },
   { date: "2026-04-25", title: "MT-Cast External",       category: "MT-Cast External" },
   { date: "2026-04-27", title: "MOTM",                   category: "MOTM" },
   { date: "2026-04-30", title: "MTODAY",                 category: "MTODAY" },
 
   // ── Mei 2026 ────────────────────────────────────────────────────────────────
   { date: "2026-05-02", title: "Konten Materi 5",        category: "Konten Materi" },
+  { date: "2026-05-09", title: "Visit Community",        category: "VISIT COMMUNITY" },
   { date: "2026-05-14", title: "MTODAY",                 category: "MTODAY" },
   { date: "2026-05-16", title: "Konten Materi 6",        category: "Konten Materi" },
   { date: "2026-05-22", title: "Training Internal 3",    category: "Training Internal" },

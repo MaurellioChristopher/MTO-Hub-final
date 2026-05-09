@@ -4,16 +4,19 @@ import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/attendance/events — daftar upcoming + recent events
-export async function GET() {
+// GET /api/attendance/events?from=YYYY-MM-DD&to=YYYY-MM-DD
+// Jika tidak ada param, pakai default: 7 hari lalu s.d. 60 hari ke depan
+export async function GET(request: Request) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { searchParams } = new URL(request.url);
+  const from = searchParams.get("from")
+    ?? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const to = searchParams.get("to")
+    ?? new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
   const supabase = getServerClient();
-  const today = new Date().toISOString().split("T")[0];
-  // 7 hari lalu sampai 60 hari ke depan
-  const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-  const to   = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
   const { data: events, error } = await supabase
     .from("events")

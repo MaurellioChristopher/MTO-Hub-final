@@ -4,10 +4,37 @@ import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import {
   CalendarCheck, CheckCircle2, XCircle, Clock,
-  Users, ChevronRight, Loader2, MapPin, Calendar,
+  ChevronRight, Loader2, MapPin, Calendar,
   AlertCircle, ArrowLeft, RefreshCw, CalendarDays,
 } from "lucide-react";
 import { PROKER_DATA, CATEGORY_CONFIG } from "@/lib/proker-data";
+
+// ── Bulan-bulan aktif MTO 25/26 ───────────────────────────────────────────────
+const MONTHS = [
+  { value: "2026-03", label: "Mar" },
+  { value: "2026-04", label: "Apr" },
+  { value: "2026-05", label: "Mei" },
+  { value: "2026-06", label: "Jun" },
+  { value: "2026-07", label: "Jul" },
+  { value: "2026-08", label: "Agu" },
+  { value: "2026-09", label: "Sep" },
+  { value: "2026-10", label: "Okt" },
+  { value: "2026-11", label: "Nov" },
+  { value: "2026-12", label: "Des" },
+];
+
+function getMonthRange(ym: string) {
+  const [y, m] = ym.split("-").map(Number);
+  const from = `${ym}-01`;
+  const lastDay = new Date(y, m, 0).getDate();
+  const to = `${ym}-${String(lastDay).padStart(2, "0")}`;
+  return { from, to };
+}
+
+function getCurrentMonthValue() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface AttendanceEvent {
@@ -123,17 +150,24 @@ export default function AttendancePage() {
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [updating, setUpdating]         = useState<string | null>(null);
   const [toast, setToast]               = useState<string | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthValue());
 
   const isAdmin = session?.user?.role === "Admin";
   const myId    = session?.user?.id;
 
-  // Fetch events
-  useEffect(() => {
-    fetch("/api/attendance/events")
+  // Fetch events berdasarkan bulan yang dipilih
+  const fetchEvents = useCallback((monthValue: string) => {
+    setLoading(true);
+    const { from, to } = getMonthRange(monthValue);
+    fetch(`/api/attendance/events?from=${from}&to=${to}`)
       .then((r) => r.json())
       .then((data) => setEvents(data ?? []))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchEvents(selectedMonth);
+  }, [selectedMonth, fetchEvents]);
 
   // Fetch members for selected event
   const fetchMembers = useCallback(async (eventId: string) => {
@@ -176,8 +210,9 @@ export default function AttendancePage() {
         )
       );
 
-      // Refresh event summary
-      const updatedEvents = await fetch("/api/attendance/events").then((r) => r.json());
+      // Refresh event summary (sesuai bulan yang dipilih)
+      const { from, to } = getMonthRange(selectedMonth);
+      const updatedEvents = await fetch(`/api/attendance/events?from=${from}&to=${to}`).then((r) => r.json());
       setEvents(updatedEvents ?? []);
       setSelectedEvent((prev) =>
         prev ? (updatedEvents ?? []).find((e: AttendanceEvent) => e.id === prev.id) ?? prev : null
@@ -200,7 +235,7 @@ export default function AttendancePage() {
     setTimeout(() => setToast(null), 2500);
   }
 
-  // Kelompokkan event
+  // Kelompokkan event berdasarkan upcoming/past relatif ke hari ini
   const upcomingEvents = events.filter((e) => isUpcoming(e.date));
   const pastEvents     = events.filter((e) => !isUpcoming(e.date));
 
@@ -217,9 +252,15 @@ export default function AttendancePage() {
   const absent  = members.filter((m) => m.attendance?.status === "absent").length;
   const unmarked = members.length - present - excused - absent;
 
-  // ── Proker reference (nearby events) ───────────────────────────────────────
+  // ── Proker reference (bulan yang dipilih) ─────────────────────────────────
   const TODAY_STR = getLocalTodayStr();
-  const nearbyProker = PROKER_DATA.filter((p) => p.date >= TODAY_STR).slice(0, 12);
+  const { from: prokerFrom, to: prokerTo } = getMonthRange(selectedMonth);
+  const nearbyProker = PROKER_DATA.filter(
+    (p) => p.date >= prokerFrom && p.date <= prokerTo
+  );
+
+  // Label bulan yang sedang dipilih
+  const selectedMonthLabel = MONTHS.find((m) => m.value === selectedMonth)?.label ?? selectedMonth;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -514,6 +555,59 @@ export default function AttendancePage() {
               <p className="mt-1 text-sm text-muted-foreground">
                 Pilih event untuk mencatat kehadiran anggota MTO 25/26
               </p>
+
+              {/* ── Filter Bulan ── */}
+              <div className="mt-4 flex items-center gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+                {MONTHS.map((m) => {
+                  const isActive  = m.value === selectedMonth;
+                  const isCurrent = m.value === getCurrentMonthValue();
+                  const isPast    = m.value < getCurrentMonthValue();
+                  return (
+                    <button
+                      key={m.value}
+                      id={`month-filter-${m.value}`}
+                      onClick={() => {
+                        setSelectedMonth(m.value);
+                        setSelectedEvent(null);
+                        setMembers([]);
+                      }}
+                      className="shrink-0 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all duration-200"
+                      style={
+                        isActive
+                          ? {
+                              background: "linear-gradient(135deg,#DC143C,#8B0000)",
+                              color: "#fff",
+                              boxShadow: "0 0 14px rgba(220,20,60,0.4)",
+                              border: "1px solid rgba(220,20,60,0.6)",
+                            }
+                          : {
+                              background: isCurrent
+                                ? "rgba(220,20,60,0.08)"
+                                : isPast
+                                  ? "rgba(255,255,255,0.04)"
+                                  : "rgba(255,255,255,0.02)",
+                              color: isCurrent && !isActive
+                                ? "#DC143C"
+                                : isPast
+                                  ? "var(--muted-foreground)"
+                                  : "rgba(255,255,255,0.35)",
+                              border: isCurrent && !isActive
+                                ? "1px solid rgba(220,20,60,0.25)"
+                                : "1px solid rgba(255,255,255,0.07)",
+                            }
+                      }
+                    >
+                      {m.label}
+                      {isCurrent && (
+                        <span
+                          className="ml-1 inline-block h-1 w-1 rounded-full align-middle"
+                          style={{ background: isActive ? "#fff" : "#DC143C" }}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {loading ? (
@@ -523,11 +617,11 @@ export default function AttendancePage() {
               </div>
             ) : (
               <>
-                {/* Upcoming */}
+                {/* Upcoming (dalam bulan terpilih) */}
                 {upcomingEvents.length > 0 && (
                   <div>
                     <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
-                      Agenda Mendatang
+                      {selectedMonth === getCurrentMonthValue() ? "Agenda Mendatang" : `Event ${selectedMonthLabel} 2026`}
                     </p>
                     <div className="space-y-2">
                       {upcomingEvents.map((event) => (
@@ -542,13 +636,13 @@ export default function AttendancePage() {
                   </div>
                 )}
 
-                {/* Past */}
+                {/* Past (dalam bulan terpilih) */}
                 {pastEvents.length > 0 && (
                   <div>
                     <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
-                      Event Baru Lalu (7 Hari)
+                      {selectedMonth < getCurrentMonthValue() ? `Event ${selectedMonthLabel} 2026` : "Event Sudah Berlalu"}
                     </p>
-                    <div className="space-y-2 opacity-70">
+                    <div className="space-y-2" style={{ opacity: selectedMonth < getCurrentMonthValue() ? 1 : 0.7 }}>
                       {pastEvents.map((event) => (
                         <EventCard
                           key={event.id}
@@ -567,7 +661,7 @@ export default function AttendancePage() {
                     style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)" }}
                   >
                     <CalendarCheck size={40} className="opacity-30" />
-                    <p className="text-sm">Tidak ada event dalam waktu dekat.</p>
+                    <p className="text-sm">Tidak ada event di bulan {selectedMonthLabel}.</p>
                   </div>
                 )}
               </>
